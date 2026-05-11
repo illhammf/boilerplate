@@ -1,88 +1,453 @@
-## 📊 GitHub Repository Stats
+# SETUP PEMROGRAMAN WEB 2026 (WSL + GITHUB + DOCKER)
 
-| 📈 Metric                      | 🔢 Value |
-|-------------------------------|----------|
-| 🧲 Total Clones (14 days)     | <!--CLONE_COUNT--> 163 
-| 👤 Unique Visitors (14 days)  | <!--UNIQUE_CLONE--> 93 
-| 👀 Total Views (14 days)      | <!--VIEW_COUNT--> 108 
-| 🧍 Unique Viewers (14 days)   | <!--UNIQUE_VIEWS--> 31 
-| ⭐ Stars                       | <!--STARS--> 1 
-| 🍴 Forks                      | <!--FORKS--> 2 
-| 🕒 Last Updated               | <!--LAST_UPDATED--> 2026-04-06 00:08:39 UTC 
+---
+
+Tolong dibaca dengan cermat dan teliti agar tidak terjadi kesalahan dalam Instalasi/Setup.
+Jangan terlalu terburu-buru dan silahkan ikutin tahapannya.
+Semangattt!
 
 
+![Semangat](Semangat.png)
 
-# PERHATIAN HARAP DI BACA DENGAN CERMAT DAN TELITI
-# CONFIGURATION PROJECT
-## CROSSCHECK REQUIREMENT
-1. PASTIKAN WSL ANDA SUDAH ROOT
-```php
-whoami
+---
+
+## Deskripsi
+
+Tutorial ini menjelaskan langkah-langkah setup environment Mata Kuliah Web Development menggunakan:
+
+- WSL (Linux di Windows)
+- Visual Studio Code System
+- Docker (Container)
+- GitHub (Version Control)
+- Laravel (Framework PHP)
+
+---
+
+## 🚫 PERINGATAN WAJIB BACA!!!
+
+- Jangan pakai jaringan Esa Unggul (Wifi/LAN)
+- Pastikan Jaringan kamu stabil dan tidak LAG
+- Siapkan Kuota yang banyak karena akan download banyak hal
+- Sudah menginstall Visual Studio Code System, Docker, Navicat v17 dari Djambred
+
+## 🌐 TOOLS PERKULIAHAN
+1. WSL
+2. Docker (https://www.docker.com)
+3. Navicat (https://shared.djncloud.my.id/tools_tempur/)
+4. VSCode (https://code.visualstudio.com/download)
+5. Github (https://github.com)
+6. VPS (sewa 3 bulan)
+7. Domain (sewa 1 tahun)
+8. Cloudflared (https://www.cloudflare.com)
+
+---
+
+kalo sudah SIAP, kita gass lanjut ke tahapannya hehe 😁
+
+---
+
+## 1. Install WSL
+
+### Langkah:
+
+1. Buka **Settings → System → Optional Features**
+2. Klik **More Windows Features**
+3. Centang:
+   - Virtual Machine Platform
+   - Windows Subsystem for Linux
+4. Restart komputer
+
+### Install Ubuntu
+
+- **Install Ubuntu dari Microsoft Store**
+
+---
+
+## 2. Set WSL ke WSL2 & ROOT
+
+Buka **PowerShell** (Run as Administrator):
+
+```sh
+wsl --set-default-version 2
 ```
-2. INSTALL jq
-```php
+
+---
+
+## 3. Konfigurasi WSL (WAJIB)
+
+**Edit file:**
+
+```sh
+nano /etc/wsl.conf
+```
+
+nanti sekalian ganti jika kamu masih **user**, ganti jadi **root**
+
+**Isi konfigurasi (copy semua dan masukkan kedalamnya):**
+
+```bash
+[network]
+generateResolvConf=false
+generateHosts=false
+hostname=DemoHost
+
+[boot]
+systemd=true
+command=service docker start
+
+[user]
+default=root
+
+[automount]
+enabled=true
+root=/
+options="metadata,uid=1003,gid=1003,umask=077,fmask=11,case=off"
+mountFsTab=true
+
+[interop]
+enabled=true
+appendWindowsPath=true
+```
+
+atau bisa didapatkan dari:
+https://learn.microsoft.com/en-us/windows/wsl/wsl-config#configure-global-options-with-wslconfig
+
+**lalu Restart WSL:**
+Jalankan ini di PowerShell, **jangan di WSL!!!**
+
+```sh
+wsl --shutdown
+```
+
+---
+
+## 4. Install Dependencies
+
+### Buka WSL lagi
+
+jalankan:
+_bisa langsung semua ataupun satu per satu_
+```bash
+apt update && apt upgrade -y
+apt install git -y
+apt install python3 python3-pip -y
+apt install default-jdk -y
+apt install plantuml -y
 apt install jq -y
 ```
 
-HASIL :
-❯ whoami
-root
+---
 
-## SETUP AWAL
-1. BUKA GITHUB DAN AMBIL SETTING ATAU BISA COPY PASTE URL DIBAWAH INI
-```php
-    https://github.com/settings/tokens
-```
-2. SELANJUTNYA AMBIL MENU PERSONAL ACCESS TOKEN (MASIH DIDALAM SETTING GITHUB)
-3. PILIH MENU TOKEN (classic) dan GENERATE NEW TOKEN PILIHANNYA GENERATE TOKEN CLASSIC !!!
-4. ISI NOTE DENGAN INITSCRIPT
-5. SET EXPIRATION TO NO EXPIRATION
-6. CENTANG SEMUA REPO, USER DAN DELETE_REPO
-7. BUAT FILE DIDALAM BOILERPLATE DENGAN NAMA ".github-user dan .github-token" ATAU BISA COPY PASTE CMD DIBAWAH INI DI DALAM BOILERPLATE
-```php
-touch .github-token
-```
-```php
-touch .github-user
-```
-8. DI DALAM FILE .github-token PASTE TOKEN YANG TELAH DI GENERATE TADI
-9. DI DALAM FILE .github-user KETIKKAN USER GITHUB ANDA
+## 5. Setup ZSH (Optional biar Ganteng)
 
-## SETUP KEDUA DI DALAM POWERSHELL DENGAN RUN ADMINISTRATOR
-1. LAKUKAN DI POWERSHELL DENGAN RUN AS ADMINISTRATOR
-```php
-Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-```
-2. MASIH DI POWERSHELL DENGAN RUN AS ADMINISTRATOR
-```php
-choco install mkcert
-```
-3. MASIH DI POWERSHELL DENGAN RUN AS ADMINISTRATOR
-```php
-mkcert -install
-```
-4. RESTART LAPTOP KALIAN
-
-### JIKA ERROR TIDAK BISA INSTALL COBA LANGKAH INI MASIH DILAKUKAN DENGAN POWERSHELL RUN AS ADMINISTRATOR
-#### SATU
-```php
-Set-ExecutionPolicy Bypass -Scope Process -Force; `
-[System.IO.Directory]::Delete("$env:ProgramData\chocolatey", $true)
+### ZSH
+```bash
+apt install zsh -y
 ```
 
-#### DUA
-```php
-$envPath = [Environment]::GetEnvironmentVariable("Path", [EnvironmentVariableTarget]::Machine)
-$newPath = ($envPath -split ";") -ne "C:\ProgramData\chocolatey\bin" -join ";"
-[Environment]::SetEnvironmentVariable("Path", $newPath, [EnvironmentVariableTarget]::Machine)
+### oh my Zsh
+```bash
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 ```
 
-## UNTUK MEMULAI SILAHKAN LAKUKAN PERINTAH BERIKUT INI 
-### EKSEKUSI PERINTAH SETUP
-### MISALNYA NAMA PROJECT NYA ADALAH PEMWEB 
-```php
+**Install plugin:**
+
+```bash
+git clone https://github.com/zsh-users/zsh-autosuggestions $ZSH_CUSTOM/plugins/zsh-autosuggestions
+git clone https://github.com/zsh-users/zsh-syntax-highlighting $ZSH_CUSTOM/plugins/zsh-syntax-highlighting
+```
+
+**Edit config:**
+
+```sh
+nano ~/.zshrc
+```
+
+**Cari dan ubah Ubah:**
+
+```sh
+plugins=(git)
+```
+
+Menjadi:
+
+```sh
+plugins=(git zsh-autosuggestions zsh-syntax-highlighting)
+```
+
+**Reload:**
+
+```sh
+source ~/.zshrc
+```
+
+---
+
+## 6. Setup GitHub SSH
+
+Jalankan:
+_bisa langsung semua ataupun satu per satu_
+```bash
+ssh-keygen -t rsa -b 4096 -C "emailkamu@gmail.com"
+eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/id_rsa
+cat ~/.ssh/id_rsa.pub
+```
+
+Tambahkan ke GitHub:
+_Login Github dulu_
+
+Klik
+**Settings → SSH Keys → Add New Key**
+masukkan SSH key nya
+
+**Test koneksi:**
+
+```sh
+ssh -T git@github.com
+```
+
+Kalo sudah muncul Hi (username Github Kamu), berarti sudah Berhasil dan gas lanjut
+
+---
+
+## 7. Clone Repository
+
+```bash
+cd ~
+git clone git@github.com:djambred/boilerplate.git
+cd boilerplate
+```
+
+---
+
+## 8. Setup GitHub Token
+
+Buka:
+https://github.com/settings/tokens
+
+atau klik
+Settings - Developer Settings - Personal Access Tokens - Tokens (classic)
+
+Buat Token Baru (Generate new token):
+
+```sh
+Token Classic
+kasih nama INITSCRIPT
+No expiration (tidak ada kadaluarsa)
+```
+
+Lalu Centang:
+- repo
+- user
+- delete_repo
+
+**Simpan ke file:**
+
+_Jalankan ini satu-satu_
+```sh
+nano .github-token
+nano .github-user
+```
+**Isi:**
+
+```sh
+.github-token → token
+.github-user → username GitHub kamu
+```
+
+**Jangan upload file ini ke GitHub!**
+
+---
+
+## 9. Jalankan Project
+
+masuk ke dalam Boilerplate
+```sh
+cd boilerplate
+```
+
+lalu lanjut
+```bash
 ./start.sh pemweb
 ```
+
+lanjut
+
+```sh
+./start.sh crkosongdua
+```
+ini disesuaikan sesuai kelas masing-masing, bisa ***crkosongsatu*** atau ***crkosongdua***
+
+**Troubleshooting / Kalo terjadi Error**
+❌ mkcert tidak ditemukan (install dulu)
+
+```sh
+apt install mkcert -y
+mkcert -install
+```
+
+❌ Permission denied (publickey)
+```sh
+SSH belum dikonfigurasi dengan benar
+```
+
+❌ Docker build lama
+```sh
+ditunggu aja, Normalnya (5–20 menit)
+```
+
+❌ Docker tidak jalan
+```sh
+Pastikan Docker Desktop aktif!
+```
+
+❌ Code tidak ditemukan
+Jalankan ini
+```sh
+ls / | grep -E '^c$|^d$'
+```
+
+Kalau muncul c, lanjut:
+```sh
+ls "/c/Program Files"
+```
+
+Terus cari VS Code:
+```sh
+ls "/c/Program Files" | grep -i "code\|vs"
+```
+
+Lalu cari executable-nya:
+```sh
+find "/c/Program Files" -maxdepth 3 \( -iname "code" -o -iname "code.cmd" -o -iname "Code.exe" \) 2>/dev/null
+```
+
+Karena cmd.exe juga nggak kebaca dari PATH, coba panggil langsung pakai absolute path:
+```sh
+"/c/Windows/System32/cmd.exe" /c "where code"
+```
+
+Kalau itu juga gagal, cek dulu apakah folder Windows-nya ada:
+```sh
+ls "/c/Windows/System32/cmd.exe"
+```
+Kalau file itu ada, berarti interop Windows ada, cuma PATH-nya belum kebaca.
+
+Kalau hasil find nanti misalnya ketemu seperti ini:
+```sh
+/c/Program Files/VSCode-win32-x64-1.112.0/bin/code
+```
+atau:
+```sh
+/c/Program Files/Microsoft VS Code/bin/code
+```
+maka isi .zshrc harus pakai /c/..., bukan /mnt/c/...
+
+Contohnya:
+```sh
+export PATH=$PATH:'/c/Program Files/VSCode-win32-x64-1.112.0/bin'
+```
+
+Lalu reload:
+```sh
+source ~/.zshrc
+hash -r
+which code
+code .
+```
+
+nanti hasil diatas dimasukkan ke dalam nano ~/.zshrc
+contoh punyaku:
+```sh
+export PATH="$PATH:/c/Program Files/VSCode-win32-x64-1.112.0/bin"
+```
+
+---
+
+## 10. Masuk ke filenya
+
+```sh
+cd /root/perkuliahan/crkosongdua
+```
+_pastikan kelasnya sesuai kelas masing-masing_
+
+---
+
+## 11. Reload Environment
+
+```sh
+source /root/.zshrc
+```
+
+ ### Gas kita tes 
+ 
+coba **docker compose up**
+```sh
+dcu
+```
+
+jika hasilnya:
+```text
+[+] up 4/4
+ ✔ Network crkosongdua_default Created                                                                                 0.2ss
+ ✔ Container crkosongdua_db    Healthy                                                                                 12.6s
+ ✔ Container crkosongdua_php   Started                                                                                 12.5s
+ ✔ Container crkosongdua_nginx Started
+ ```                                                                             12.7s
+ 
+berarti sukses dan coba **tes di web browser** masukkan:
+
+```sh
+crkosongdua.test / crkosongsatu.test
+```
+
+Jika Keluar halaman Laravel, berarti BERHASIL
+Jika tidak, cek ulang siapa tau ada kesalahan (kalo bingung tanya AI)
+
+untuk menghentikan tinggal di **compose down**
+
+```sh
+dcd
+```
+
+dan hasilnya akan:
+```text
+[+] down 4/4
+ ✔ Container crkosongdua_nginx Removed                                                                                  0.6s
+ ✔ Container crkosongdua_php   Removed                                                                                  0.5s
+ ✔ Container crkosongdua_db    Removed                                                                                  1.0s
+ ✔ Network crkosongdua_default Removed                                                                                  0.3s
+```
+
+---
+
+## 12. Buka di VS Code
+
+Ketik ini di Terminal VS Code atau lanjutin di WSL tadi juga gapapa:
+
+```sh
+cd /root/perkuliahan/crkosongdua
+```
+
+lalu
+
+```sh
+code .
+```
+
+nanti akan otomastis masuk ke **Visual Studio Code**, dan sedang membuat Folder kelas masing-masing
+_pastikan extension untuk WSL sudah dipasang di VSCode kamu!!!_
+
+---
+
+```text
+Kalo sudah sampai tahap itu, Mantapp kamu sudah selesai Set-up nya :), tinggal praktikum
+tanggal 13 April 2026 🤩
+```
+
+---
+
 ## SETUP TERAKHIR DIDALAM TERMINAL WSL
 1. SETELAH SELESAI SEMUA BISA LAKUKAN SOURCE ULANG ZSHRC ATAU BISA COPY PASTE CMD DIBAWAH INI
 ```php

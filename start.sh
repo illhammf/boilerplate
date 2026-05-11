@@ -211,7 +211,7 @@ update_hosts_file() {
     log_info "Menambahkan $DOMAIN ke /etc/hosts WSL (membutuhkan sudo)..."
     echo "$HOST_ENTRY" | sudo tee -a /etc/hosts >/dev/null
   fi
-  local win_hosts_path="/mnt/c/Windows/System32/drivers/etc/hosts"
+  local win_hosts_path="/c/Windows/System32/drivers/etc/hosts"
   if grep -q "$HOST_ENTRY" "$win_hosts_path" &>/dev/null; then
     log_success "$DOMAIN sudah ada di file hosts Windows."
     return
@@ -219,7 +219,7 @@ update_hosts_file() {
   log_info "Mencoba memperbarui file hosts Windows..."
   log_warning "⚠️  PERHATIKAN DESKTOP ANDA! Pop-up UAC akan muncul meminta izin Administrator."
   local ps_script_path_win="C:\\Windows\\Temp\\update_hosts.ps1"
-  local ps_script_path_wsl="/mnt/c/Windows/Temp/update_hosts.ps1"
+  local ps_script_path_wsl="/c/Windows/Temp/update_hosts.ps1"
   cat <<EOF > "$ps_script_path_wsl"
 \$HostFile = "C:\\Windows\\System32\\drivers\\etc\\hosts"
 \$Entry = "$HOST_ENTRY"
