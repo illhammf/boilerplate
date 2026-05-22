@@ -1,59 +1,57 @@
-name: Update README Stats
+name: 🚀 Auto Update README Stats
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # Daily at midnight UTC
+    - cron: "0 0 * * *"
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   update-readme:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+      - name: 📦 Checkout Repository
+        uses: actions/checkout@v4
 
-      - name: Install jq
-        run: sudo apt-get install -y jq
+      - name: 🛠️ Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
 
-      - name: Fetch GitHub stats and update README.md
+      - name: 📊 Fetch Repository Stats
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           repo="${{ github.repository }}"
-          token="${{ secrets.GH_TOKEN }}"
 
-          # Get stats from GitHub API
-          CLONES=$(curl -s -H "Authorization: token $token" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$repo/traffic/clones)
-          VIEWS=$(curl -s -H "Authorization: token $token" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$repo/traffic/views)
-          META=$(curl -s -H "Authorization: token $token" https://api.github.com/repos/$repo)
+          CLONES=$(curl -s -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/repos/$repo/traffic/clones)
+          VIEWS=$(curl -s -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/repos/$repo/traffic/views)
+          META=$(curl -s -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/repos/$repo)
 
-          # Extract values
-          CLONE_COUNT=$(echo "$CLONES" | jq '.count')
-          UNIQUE_CLONE=$(echo "$CLONES" | jq '.uniques')
-          VIEW_COUNT=$(echo "$VIEWS" | jq '.count')
-          UNIQUE_VIEW=$(echo "$VIEWS" | jq '.uniques')
-          STARS=$(echo "$META" | jq '.stargazers_count')
-          FORKS=$(echo "$META" | jq '.forks_count')
-          UPDATED=$(date -u +'%Y-%m-%d %H:%M:%S UTC')
+          CLONE_COUNT=$(echo "$CLONES" | jq '.count // 0')
+          UNIQUE_CLONE=$(echo "$CLONES" | jq '.uniques // 0')
+          VIEW_COUNT=$(echo "$VIEWS" | jq '.count // 0')
+          UNIQUE_VIEW=$(echo "$VIEWS" | jq '.uniques // 0')
+          STARS=$(echo "$META" | jq '.stargazers_count // 0')
+          FORKS=$(echo "$META" | jq '.forks_count // 0')
+          ISSUES=$(echo "$META" | jq '.open_issues_count // 0')
+          UPDATED=$(TZ="Asia/Jakarta" date +'%d %B %Y, %H:%M WIB')
 
-          # Replace table values in README.md
           sed -i "s|<!--CLONE_COUNT-->.*|<!--CLONE_COUNT--> $CLONE_COUNT |" README.md
           sed -i "s|<!--UNIQUE_CLONE-->.*|<!--UNIQUE_CLONE--> $UNIQUE_CLONE |" README.md
           sed -i "s|<!--VIEW_COUNT-->.*|<!--VIEW_COUNT--> $VIEW_COUNT |" README.md
           sed -i "s|<!--UNIQUE_VIEWS-->.*|<!--UNIQUE_VIEWS--> $UNIQUE_VIEW |" README.md
           sed -i "s|<!--STARS-->.*|<!--STARS--> $STARS |" README.md
           sed -i "s|<!--FORKS-->.*|<!--FORKS--> $FORKS |" README.md
+          sed -i "s|<!--ISSUES-->.*|<!--ISSUES--> $ISSUES |" README.md
           sed -i "s|<!--LAST_UPDATED-->.*|<!--LAST_UPDATED--> $UPDATED |" README.md
 
-      - name: Commit & Push with GH_TOKEN
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      - name: 🤖 Commit & Push Changes
         run: |
-          git config user.name "djambred"
-          git config user.email "djambred@users.noreply.github.com"
-
-          # Set origin remote with token for authenticated push
-          git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           git add README.md
-          git commit -m "🔄 Update GitHub stats in README" || echo "No changes"
-          git push origin HEAD
+          git commit -m "🤖 auto: update README stats" || echo "No changes to commit"
+          git push

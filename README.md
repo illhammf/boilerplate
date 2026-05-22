@@ -1,3 +1,41 @@
+<div align="center">
+
+# 🚀 Laravel Boilerplate Pemrograman Web 2026
+
+### Starter Kit Laravel + Blade + Docker + WSL + GitHub
+
+![Laravel](https://img.shields.io/badge/Laravel-Framework-red?style=for-the-badge&logo=laravel)
+![PHP](https://img.shields.io/badge/PHP-Backend-777BB4?style=for-the-badge&logo=php)
+![Docker](https://img.shields.io/badge/Docker-Container-2496ED?style=for-the-badge&logo=docker)
+![WSL](https://img.shields.io/badge/WSL-Ubuntu-E95420?style=for-the-badge&logo=ubuntu)
+![GitHub](https://img.shields.io/badge/GitHub-Version_Control-181717?style=for-the-badge&logo=github)
+
+</div>
+
+---
+
+## 📊 Repository Stats
+
+| Statistik | Total |
+|---|---:|
+| 👀 Views | <!--VIEW_COUNT--> 0 |
+| 🙋 Unique Views | <!--UNIQUE_VIEWS--> 0 |
+| 📦 Clones | <!--CLONE_COUNT--> 0 |
+| 👤 Unique Clones | <!--UNIQUE_CLONE--> 0 |
+| ⭐ Stars | <!--STARS--> 0 |
+| 🍴 Forks | <!--FORKS--> 0 |
+| 🐞 Open Issues | <!--ISSUES--> 0 |
+| 🕒 Last Updated | <!--LAST_UPDATED--> - |
+
+---
+
+## ✨ Tentang Boilerplate Ini
+
+Repository ini digunakan sebagai starter project untuk praktikum Web Development berbasis Laravel.  
+Di dalamnya sudah mendukung setup WSL, Docker, GitHub, Laravel, Blade, dan shortcut command agar proses ngoding lebih cepat.
+
+---
+
 # SETUP PEMROGRAMAN WEB 2026 (WSL + GITHUB + DOCKER)
 
 ---
