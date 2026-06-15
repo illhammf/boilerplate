@@ -52,7 +52,7 @@ main() {
   # Langkah akhir
   start_containers
   create_github_repo "$SCRIPT_DIR" "$PROJECT_NAME"
-  final_steps "$ROOT_DIR" "$PROJECT_NAME"
+  final_steps "$ROOT_DIR" "$PROJECT_NAME" "$SCRIPT_DIR"
 }
 
 # --- Fungsi-fungsi Pembantu ---
@@ -302,7 +302,7 @@ create_github_repo() {
   fi
   log_info "Inisialisasi Git dan push awal..."
 
-  # Generate README otomatis
+# Generate README otomatis
 cat > README.md <<EOF
 <div align="center">
 
@@ -328,13 +328,13 @@ Built with ❤️ using Laravel, Docker, WSL & Filament
 
 **$PROJECT_NAME** merupakan aplikasi berbasis Laravel yang dibuat menggunakan **Ilham Boilerplate 2026**.
 
-Project ini sudah dikonfigurasi dengan berbagai kebutuhan modern untuk pengembangan aplikasi web, sehingga developer dapat langsung fokus pada pengembangan fitur tanpa perlu melakukan setup dari awal.
+Project ini sudah dikonfigurasi dengan berbagai kebutuhan modern untuk pengembangan aplikasi web.
 
 ---
 
 ## ✨ Fitur Bawaan
 
-- ✅ Laravel 11
+- ✅ Laravel
 - ✅ Docker Environment
 - ✅ Nginx Web Server
 - ✅ PHP 8.3
@@ -351,31 +351,33 @@ Project ini sudah dikonfigurasi dengan berbagai kebutuhan modern untuk pengemban
 
 ### Menjalankan Docker
 
-```bash
+\`\`\`bash
 docker compose up -d
-```
+\`\`\`
+
 atau
-```bash
+
+\`\`\`bash
 dcu
-```
+\`\`\`
 
 ### Masuk Container PHP
 
-```bash
+\`\`\`bash
 docker compose exec php bash
-```
+\`\`\`
 
 ### Menjalankan Migration
 
-```bash
+\`\`\`bash
 php artisan migrate
-```
+\`\`\`
 
 ### Menjalankan Seeder
 
-```bash
+\`\`\`bash
 php artisan db:seed
-```
+\`\`\`
 
 ---
 
@@ -383,15 +385,15 @@ php artisan db:seed
 
 ### Website
 
-```text
+\`\`\`text
 https://$PROJECT_NAME.test
-```
+\`\`\`
 
 ### Admin Panel
 
-```text
+\`\`\`text
 https://$PROJECT_NAME.test/admin
-```
+\`\`\`
 
 ---
 
@@ -407,7 +409,7 @@ https://$PROJECT_NAME.test/admin
 
 ## 📂 Struktur Project
 
-```text
+\`\`\`text
 app/
 bootstrap/
 config/
@@ -417,7 +419,7 @@ resources/
 routes/
 storage/
 tests/
-```
+\`\`\`
 
 ---
 
@@ -453,15 +455,15 @@ tests/
 
 Generated automatically using:
 
-```text
+\`\`\`text
 Ilham Boilerplate 2026
-```
+\`\`\`
 
 ---
 
 ## 🎯 Quote of The Project
 
-> "Consistency Beats Talent When Talent Doesn't Show Up."
+> "Konsistensi Mengalahkan Bakat Saat Bakat Tidak Muncul."
 
 🔥 Happy Coding!
 EOF
@@ -520,6 +522,12 @@ EOF
 final_steps() {
   local ROOT_DIR="$1"
   local PROJECT_NAME="$2"
+  local SCRIPT_DIR="$3"
+  local GITHUB_USER="unknown"
+
+  if [ -f "$SCRIPT_DIR/.github-user" ]; then
+    GITHUB_USER=$(<"$SCRIPT_DIR/.github-user")
+  fi
   log_info "🧠 Membuka proyek di Visual Studio Code..."
   code "$ROOT_DIR"
   log_success "🎉 Project '$PROJECT_NAME' berhasil dibuat!"
