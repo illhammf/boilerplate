@@ -19,7 +19,10 @@ main() {
 
   # Inisialisasi variabel proyek
   local PROJECT_NAME="$1"
-  PROJECT_NAME=$(echo "$PROJECT_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr '_' '-')
+  PROJECT_NAME=$(echo "$PROJECT_NAME" \
+    | tr '[:upper:]' '[:lower:]' \
+    | tr ' _' '-' \
+    | sed 's/[^a-z0-9-]//g')
   local SCRIPT_DIR
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   local ROOT_DIR="/root/perkuliahan/$PROJECT_NAME"
