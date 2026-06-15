@@ -520,7 +520,7 @@ EOF
 final_steps() {
   local ROOT_DIR="$1"
   local PROJECT_NAME="$2"
-  log_info "Membuka proyek di Visual Studio Code...😍"
+  log_info "🧠 Membuka proyek di Visual Studio Code..."
   code "$ROOT_DIR"
   log_success "🎉 Project '$PROJECT_NAME' berhasil dibuat!"
   echo ""
@@ -584,6 +584,7 @@ final_steps() {
   "👨‍💻 Build Something Awesome!"
   "🌙 Late Night Coding Session Activated!"
   "🚢 Ship It!"
+  "🤩 Si Ganteng!!!"
   )
 
   RANDOM_QUOTE=${QUOTES[$RANDOM % ${#QUOTES[@]}]}
