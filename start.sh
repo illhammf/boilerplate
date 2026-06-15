@@ -19,10 +19,14 @@ main() {
 
   # Inisialisasi variabel proyek
   local PROJECT_NAME="$1"
+  PROJECT_NAME=$(echo "$PROJECT_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr '_' '-')
   local SCRIPT_DIR
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   local ROOT_DIR="/root/perkuliahan/$PROJECT_NAME"
   local TEMPLATE_DIR="$SCRIPT_DIR/template"
+  if [ -d "$ROOT_DIR" ]; then
+    log_error "Folder project '$ROOT_DIR' sudah ada. Hapus dulu atau pakai nama lain."
+  fi
   local DOMAIN="${PROJECT_NAME}.test"
   local HOST_ENTRY="127.0.0.1 $DOMAIN"
 
@@ -31,7 +35,7 @@ main() {
   setup_directories "$ROOT_DIR"
   copy_template_files "$ROOT_DIR" "$TEMPLATE_DIR"
   generate_ssl_certs "$ROOT_DIR" "$DOMAIN"
-  render_configs "$ROOT_DIR" "$PROJECT_NAME" "$DOMAIN"
+  render_configs "$ROOT_DIR" "$PROJECT_NAME" "$DOMAIN" "$TEMPLATE_DIR"
   generate_docker_compose "$ROOT_DIR"
   update_zshrc "$HOME/.zshrc"
   update_hosts_file "$HOST_ENTRY" "$DOMAIN"
@@ -118,6 +122,7 @@ render_configs() {
   local ROOT_DIR="$1"
   local PROJECT_NAME="$2"
   local DOMAIN="$3"
+  local TEMPLATE_DIR="$4"
 
   log_info "Menghasilkan file-file konfigurasi..."
   # Nginx Config
@@ -152,7 +157,6 @@ generate_docker_compose() {
 
   log_info "Membuat file docker-compose.yml..."
   cat <<EOF >"$ROOT_DIR/docker-compose.yml"
-version: '3.8'
 services:
   php:
     build:
@@ -273,7 +277,7 @@ create_github_repo() {
   BODY=$(echo "$RESPONSE" | sed '$d')
   local STATUS
   STATUS=$(echo "$RESPONSE" | tail -n1)
-  local GITHUB_SSH="git@github.com:$GITHUB_USER/$REPO_NAME.git"
+  local GITHUB_HTTPS="https://github.com/$GITHUB_USER/$REPO_NAME.git"
   if [ "$STATUS" = "201" ]; then
     log_success "Repositori GitHub '$REPO_NAME' berhasil dibuat."
   elif [ "$STATUS" = "422" ]; then
@@ -283,11 +287,61 @@ create_github_repo() {
     return
   fi
   log_info "Inisialisasi Git dan push awal..."
+
+  # Generate README otomatis
+cat > README.md <<EOF
+# 🚀 ${PROJECT_NAME}
+
+Project Laravel berbasis:
+
+- Laravel
+- Docker
+- Nginx
+- PHP
+- MariaDB
+- WSL
+- Filament Admin Panel
+
+## 📦 Instalasi
+
+\`\`\`bash
+docker compose up -d
+\`\`\`
+
+## 🌐 Akses
+
+Website:
+
+\`\`\`
+https://${PROJECT_NAME}.test
+\`\`\`
+
+Admin Panel:
+
+\`\`\`
+https://${PROJECT_NAME}.test/admin
+\`\`\`
+
+## 🛠 Tech Stack
+
+- Laravel
+- PHP
+- MariaDB
+- Docker
+- Nginx
+- Filament
+- WSL Ubuntu
+- Git & GitHub
+
+## 👨‍💻 Developer
+Generated using Ilham Boilerplate 2026
+EOF
+
   git init
   git branch -M main
   git add .
   git commit -m "🎉 Initial commit"
-  git remote add origin "$GITHUB_SSH"
+  git remote add origin "$GITHUB_HTTPS"
   git push -u origin main
   log_success "Proyek berhasil di-push ke GitHub."
 }
@@ -302,24 +356,25 @@ _get_php_container_name() { docker ps --filter "name=_php" --format "{{.Names}}"
 dcr() { [ -z "$1" ] && { echo "❌ Usage: dcr <ModelName>"; return 1; }; local C=$(_get_php_container_name); [ -z "$C" ] && { echo "❌ Kontainer PHP tidak ditemukan."; return 1; }; local N="$1"; local NS=$(echo "$N" | sed -E 's/([a-z])([A-Z])/\1_\2/g' | tr '[:upper:]' '[:lower:]'); local NP="${NS}s"; echo "🗑 Menghapus file untuk '$N'..."; docker exec "$C" rm -f "app/Models/$N.php" "app/Http/Controllers/${N}Controller.php" "database/seeders/${N}Seeder.php" "app/Policies/${N}Policy.php"; docker exec "$C" find database/migrations -type f -name "*create_${NP}_table.php" -delete; docker exec "$C" rm -rf "app/Filament/Admin/Resources/${N}Resource.php"; }
 dcm() { [ -z "$1" ] && { echo "❌ Usage: dcm <ModelName>"; return 1; }; local C=$(_get_php_container_name); [ -z "$C" ] && { echo "❌ Kontainer PHP tidak ditemukan."; return 1; }; docker exec -it "$C" php artisan make:model "$1" -msc; docker exec -it "$C" php artisan make:filament-resource "$1" --generate; }
 dcp() {
-  if [ $# -eq 0 ]; then
-    echo "❌ Usage: dcp your commit message"
-    return 1
-  fi
+    [ $# -eq 0 ] && {
+        echo "❌ Usage: dcp \"commit message\""
+        return 1
+    }
 
-  if ! git diff --quiet || ! git diff --cached --quiet; then
-    echo "⚠️ Warning: You have uncommitted changes."
-  fi
+    git add .
 
-  if ! git pull --rebase origin main; then
-    echo "❌ Rebase failed. Resolve conflicts manually."
-    return 1
-  fi
+    if git diff --cached --quiet; then
+        echo "⚠️ Tidak ada perubahan"
+        return 0
+    fi
 
-  git add .
-  git commit -m "$*"
-  git push -u origin main
-  echo "✅ Changes pushed to origin/main."
+    git commit -m "$*"
+
+    git pull origin main --rebase
+
+    git push origin main
+
+    echo "✅ Push berhasil"
 }
 dcd() { local P=$(docker ps --format "{{.Names}}" | grep _php | head -n 1 | cut -d'_' -f1); [ -n "$P" ] && docker compose -p "$P" down || echo "❌ Tidak dapat mendeteksi proyek."; }
 alias dcu='docker compose up -d'
@@ -334,7 +389,13 @@ final_steps() {
   local PROJECT_NAME="$2"
   log_info "Membuka proyek di VS Code..."
   code "$ROOT_DIR"
-  log_success "🎉 Semua selesai! Proyek '$PROJECT_NAME' siap dikembangkan."
+  log_success "🎉 Project '$PROJECT_NAME' berhasil dibuat!"
+  echo ""
+  echo "🌐 Website : https://${PROJECT_NAME}.test"
+  echo "🛠 Admin   : https://${PROJECT_NAME}.test/admin"
+  echo "📁 Folder  : $ROOT_DIR"
+  echo "🐳 Docker  : docker compose ps"
+  echo ""
   log_info "Direktori proyek: $ROOT_DIR"
   log_info "Memuat ulang shell Zsh untuk menerapkan alias baru..."
   exec zsh
