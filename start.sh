@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euo pipefail
+set -euo pipefail # Untuk memastikan skrip berhenti jika ada error, variabel tidak di-set, atau perintah gagal
 
 # --- Fungsi Bantuan untuk Pencatatan Log ---
 log_info() { echo "ℹ️  $1"; }
@@ -58,7 +58,7 @@ main() {
 # --- Fungsi-fungsi Pembantu ---
 # Fungsi untuk memeriksa apakah semua dependensi yang diperlukan sudah terpasang
 check_dependencies() {
-    log_info "Memeriksa dependensi...🔍"
+    log_info "🔍 Memeriksa dependensi..."
     for cmd in git docker mkcert code nc; do
         if ! command -v "$cmd" &>/dev/null; then
             log_error "Perintah '$cmd' tidak ditemukan. Harap install terlebih dahulu!!!."
@@ -82,7 +82,7 @@ setup_directories() {
 copy_template_files() {
   local ROOT_DIR="$1"
   local TEMPLATE_DIR="$2"
-  log_info "Menyalin file template...😪"
+  log_info "😪 Menyalin file template..."
   if [ ! -d "$TEMPLATE_DIR" ]; then
     log_error "Direktori template '$TEMPLATE_DIR' tidak ditemukan."
   fi
@@ -124,7 +124,7 @@ generate_ssl_certs() {
     mkcert -install
   fi
   mkcert -cert-file "$CERT_PATH" -key-file "$KEY_PATH" "$DOMAIN" "localhost" "127.0.0.1"
-  log_success "Sertifikat SSL berhasil dibuat untuk $DOMAIN di $NGINX_SSL...💌"
+  log_success "💌 Sertifikat SSL berhasil dibuat untuk $DOMAIN di $NGINX_SSL..."
 }
 
 # Fungsi untuk menghasilkan file konfigurasi dengan menggantikan placeholder
@@ -214,7 +214,7 @@ services:
       - ./db/conf.d:/etc/mysql/conf.d
       - ./db/data:/var/lib/mysql
 EOF
-  log_success "File docker-compose.yml berhasil dibuat 🙏."
+  log_success "🙏 File docker-compose.yml berhasil dibuat..."
 }
 
 # Fungsi untuk memperbarui file hosts di WSL dan Windows
@@ -293,11 +293,11 @@ create_github_repo() {
   STATUS=$(echo "$RESPONSE" | tail -n1)
   local GITHUB_HTTPS="https://github.com/$GITHUB_USER/$REPO_NAME.git"
   if [ "$STATUS" = "201" ]; then
-    log_success "Repositori GitHub '$REPO_NAME' berhasil dibuat...🤩"
+    log_success "🤩 Repositori GitHub '$REPO_NAME' berhasil dibuat..."
   elif [ "$STATUS" = "422" ]; then
     log_warning "Repositori '$REPO_NAME' sudah ada. Melanjutkan..."
   else
-    log_error "Gagal membuat repositori 😖. Status: $STATUS. Pesan: $BODY"
+    log_error "😖 Gagal membuat repositori. Status: $STATUS. Pesan: $BODY"
     return
   fi
   log_info "Inisialisasi Git dan push awal..."
@@ -506,7 +506,7 @@ dcp() {
 
     git push origin main
 
-    echo "✅ Push berhasil"
+    echo "✅ Push berhasil..., Mantappp 👍"
 }
 dcd() { local P=$(docker ps --format "{{.Names}}" | grep _php | head -n 1 | cut -d'_' -f1); [ -n "$P" ] && docker compose -p "$P" down || echo "❌ Tidak dapat mendeteksi proyek."; }
 alias dcu='docker compose up -d'
