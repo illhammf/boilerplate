@@ -93,7 +93,7 @@ copy_template_files() {
   cp "$TEMPLATE_DIR/php/www.conf" "$ROOT_DIR/php/"
   cp "$TEMPLATE_DIR/php/local.ini" "$ROOT_DIR/php/"
   # Salin seluruh template aplikasi Laravel Anda dari src
-  log_info "Menyalin template aplikasi dari template/src/..."
+  log_info " 📂 Menyalin template aplikasi dari template/src/..."
   if [ -z "$(ls -A "$TEMPLATE_DIR/src/")" ]; then log_error "Direktori 'template/src' kosong!"; fi
   cp -a "$TEMPLATE_DIR/src/." "$ROOT_DIR/src/"
 
@@ -114,11 +114,11 @@ generate_ssl_certs() {
   local KEY_PATH="$NGINX_SSL/$DOMAIN.key"
 
   if [[ -f "$CERT_PATH" && -f "$KEY_PATH" ]]; then
-    log_info "Sertifikat untuk $DOMAIN sudah ada. Melewati."
+    log_info "Sertifikat untuk $DOMAIN sudah ada!!! Melewati."
     return
   fi
 
-  log_info "Membuat sertifikat SSL untuk $DOMAIN..."
+  log_info " ✉️ Membuat sertifikat SSL untuk $DOMAIN..."
   if [ ! -d "$(mkcert -CAROOT)" ]; then
     log_info "Local CA tidak ditemukan, menjalankan 'mkcert -install'..."
     mkcert -install
@@ -134,7 +134,7 @@ render_configs() {
   local DOMAIN="$3"
   local TEMPLATE_DIR="$4"
 
-  log_info "Menghasilkan file-file konfigurasi..."
+  log_info " 📄 Menghasilkan file-file konfigurasi..."
   # Nginx Config
   sed -e "s|{{DOMAIN}}|$DOMAIN|g" "$TEMPLATE_DIR/nginx/default.conf.template" >"$ROOT_DIR/nginx/default.conf"
 
