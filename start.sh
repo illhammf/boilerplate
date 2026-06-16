@@ -134,7 +134,7 @@ render_configs() {
   local DOMAIN="$3"
   local TEMPLATE_DIR="$4"
 
-  log_info " 📄 Menghasilkan file-file konfigurasi..."
+  log_info "📄 Menghasilkan file-file konfigurasi..."
   # Nginx Config
   sed -e "s|{{DOMAIN}}|$DOMAIN|g" "$TEMPLATE_DIR/nginx/default.conf.template" >"$ROOT_DIR/nginx/default.conf"
 
@@ -166,7 +166,7 @@ EOF
 generate_docker_compose() {
   local ROOT_DIR="$1"
 
-  log_info " 🐋 Membuat file docker-compose.yml..."
+  log_info "🐋 Membuat file docker-compose.yml..."
   cat <<EOF >"$ROOT_DIR/docker-compose.yml"
 services:
   php:
