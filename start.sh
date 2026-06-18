@@ -61,11 +61,11 @@ check_dependencies() {
     log_info "🔍 Memeriksa dependensi..."
     for cmd in git docker mkcert code nc; do
         if ! command -v "$cmd" &>/dev/null; then
-            log_error "Perintah '$cmd' tidak ditemukan. Harap install terlebih dahulu!!!."
+            log_error "⚠️ Perintah '$cmd' tidak ditemukan. Harap install terlebih dahulu!!!."
         fi
     done
     if ! docker compose version &>/dev/null; then
-        log_error "Perintah 'docker compose' tidak berfungsi. Pastikan Docker Anda mendukung Compose v2 atau Docker Desktop terbaru."
+        log_error "⚠️ Perintah 'docker compose' tidak berfungsi. Pastikan Docker Anda mendukung Compose v2 atau Docker Desktop terbaru."
     fi
 }
 
@@ -84,7 +84,7 @@ copy_template_files() {
   local TEMPLATE_DIR="$2"
   log_info " 😪 Menyalin file template..."
   if [ ! -d "$TEMPLATE_DIR" ]; then
-    log_error "Direktori template '$TEMPLATE_DIR' tidak ditemukan."
+    log_error "⚠️ Direktori template '$TEMPLATE_DIR' tidak ditemukan."
   fi
   # Salin semua template kecuali entrypoint
   cp "$TEMPLATE_DIR/db/my.cnf" "$ROOT_DIR/db/conf.d/"
@@ -94,7 +94,7 @@ copy_template_files() {
   cp "$TEMPLATE_DIR/php/local.ini" "$ROOT_DIR/php/"
   # Salin seluruh template aplikasi Laravel Anda dari src
   log_info " 📂 Menyalin template aplikasi dari template/src/..."
-  if [ -z "$(ls -A "$TEMPLATE_DIR/src/")" ]; then log_error "Direktori 'template/src' kosong!"; fi
+  if [ -z "$(ls -A "$TEMPLATE_DIR/src/")" ]; then log_error "⚠️ Direktori 'template/src' kosong!"; fi
   cp -a "$TEMPLATE_DIR/src/." "$ROOT_DIR/src/"
 
   # Salin skrip entrypoint Anda dan berikan izin eksekusi
@@ -120,7 +120,7 @@ generate_ssl_certs() {
 
   log_info " ✉️ Membuat sertifikat SSL untuk $DOMAIN..."
   if [ ! -d "$(mkcert -CAROOT)" ]; then
-    log_info "Local CA tidak ditemukan, menjalankan 'mkcert -install'..."
+    log_info " ⚠️ Local CA tidak ditemukan, menjalankan 'mkcert -install'..."
     mkcert -install
   fi
   mkcert -cert-file "$CERT_PATH" -key-file "$KEY_PATH" "$DOMAIN" "localhost" "127.0.0.1"
