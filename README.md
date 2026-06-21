@@ -250,7 +250,7 @@ Kalo sudah muncul Hi (username Github Kamu), berarti sudah Berhasil dan gas lanj
 
 ```bash
 cd ~
-git clone git@github.com:djambred/boilerplate.git
+git clone https://github.com/illhammf/boilerplate.git
 cd boilerplate
 ```
 
