@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🚀 Laravel Boilerplate Pemrograman Web 2026
+# Laravel Boilerplate Pemrograman Web 2026
 
 ### Starter Kit Laravel + Blade + Docker + WSL + GitHub
 
@@ -43,9 +43,6 @@ Di dalamnya sudah mendukung setup WSL, Docker, GitHub, Laravel, Blade, dan short
 Tolong dibaca dengan cermat dan teliti agar tidak terjadi kesalahan dalam Instalasi/Setup.
 Jangan terlalu terburu-buru dan silahkan ikutin tahapannya.
 Semangattt!
-
-
-![Semangat](Semangat.png)
 
 ---
 
