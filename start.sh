@@ -254,9 +254,9 @@ EOF
 start_containers() {
   read -p "🚀 Mulai proyek dengan Docker Compose sekarang? (y/n): " start_now
   if [[ "$start_now" =~ ^[Yy]$ ]]; then
-    log_info "Membangun dan menjalankan kontainer..."
+    log_info " 🛠️ Membangun dan menjalankan kontainer..."
     docker compose up -d --build
-    log_success " ‼️ Kontainer sedang berjalan di latar belakang. Anda bisa melihat log dengan 'docker compose logs -f'"
+    log_success " 📢 Kontainer sedang berjalan di latar belakang. Anda bisa melihat log dengan 'docker compose logs -f'"
   fi
 }
 
@@ -297,7 +297,7 @@ create_github_repo() {
   elif [ "$STATUS" = "422" ]; then
     log_warning "Repositori '$REPO_NAME' sudah ada. Melanjutkan..."
   else
-    log_error " ‼️ Gagal membuat repositori. Status: $STATUS. Pesan: $BODY"
+    log_error " ⚠️ Gagal membuat repositori. Status: $STATUS. Pesan: $BODY"
     return
   fi
   log_info " 🚨 Inisialisasi Git dan push awal..."
