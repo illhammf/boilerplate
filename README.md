@@ -29,9 +29,9 @@
 
 ---
 
-## ✨ Tentang Boilerplate Ini
+## Tentang Boilerplate Ini
 
-Repository ini digunakan sebagai starter project untuk praktikum Web Development berbasis Laravel.  
+Repository ini digunakan sebagai starter project untuk praktikum Web Development berbasis Laravel. <br> 
 Di dalamnya sudah mendukung setup WSL, Docker, GitHub, Laravel, Blade, dan shortcut command agar proses ngoding lebih cepat.
 
 ---
@@ -40,11 +40,9 @@ Di dalamnya sudah mendukung setup WSL, Docker, GitHub, Laravel, Blade, dan short
 
 ---
 
-Tolong dibaca dengan cermat dan teliti agar tidak terjadi kesalahan dalam Instalasi/Setup.
-Jangan terlalu terburu-buru dan silahkan ikutin tahapannya.
+Tolong dibaca dengan cermat dan teliti agar tidak terjadi kesalahan dalam Instalasi/Setup. <br>
+Jangan terlalu terburu-buru dan silahkan ikutin tahapannya. <br>
 Semangattt!
-
----
 
 ## Deskripsi
 
@@ -144,7 +142,7 @@ enabled=true
 appendWindowsPath=true
 ```
 
-atau bisa didapatkan dari:
+atau bisa didapatkan dari: <br>
 https://learn.microsoft.com/en-us/windows/wsl/wsl-config#configure-global-options-with-wslconfig
 
 **lalu Restart WSL:**
@@ -261,7 +259,7 @@ cd boilerplate
 Buka:
 https://github.com/settings/tokens
 
-atau klik
+atau klik <br>
 Settings - Developer Settings - Personal Access Tokens - Tokens (classic)
 
 Buat Token Baru (Generate new token):
@@ -304,14 +302,9 @@ cd boilerplate
 
 lalu lanjut
 ```bash
-./start.sh pemweb
+./start.sh nama_proyek
 ```
 
-lanjut
-
-```sh
-./start.sh crkosongdua
-```
 ini disesuaikan sesuai kelas masing-masing, bisa ***crkosongsatu*** atau ***crkosongdua***
 
 **Troubleshooting / Kalo terjadi Error**
@@ -377,7 +370,7 @@ atau:
 ```sh
 /c/Program Files/Microsoft VS Code/bin/code
 ```
-maka isi .zshrc harus pakai /c/..., bukan /mnt/c/...
+maka isi .zshrc harus pakai ***/c/..., bukan /mnt/c/...***
 
 Contohnya:
 ```sh
@@ -392,7 +385,7 @@ which code
 code .
 ```
 
-nanti hasil diatas dimasukkan ke dalam nano ~/.zshrc
+nanti hasil diatas dimasukkan ke dalam ***nano ~/.zshrc***
 contoh punyaku:
 ```sh
 export PATH="$PATH:/c/Program Files/VSCode-win32-x64-1.112.0/bin"
@@ -403,9 +396,9 @@ export PATH="$PATH:/c/Program Files/VSCode-win32-x64-1.112.0/bin"
 ## 10. Masuk ke filenya
 
 ```sh
-cd /root/perkuliahan/crkosongdua
+cd /root/perkuliahan/nama_proyek
 ```
-_pastikan kelasnya sesuai kelas masing-masing_
+_sesuaikan dengan proyek masing-masing_
 
 ---
 
@@ -428,8 +421,8 @@ jika hasilnya:
  ✔ Network crkosongdua_default Created                                                                                 0.2ss
  ✔ Container crkosongdua_db    Healthy                                                                                 12.6s
  ✔ Container crkosongdua_php   Started                                                                                 12.5s
- ✔ Container crkosongdua_nginx Started
- ```                                                                             12.7s
+ ✔ Container crkosongdua_nginx Started                                                                             12.7s
+ ```
  
 berarti sukses dan coba **tes di web browser** masukkan:
 
@@ -437,10 +430,10 @@ berarti sukses dan coba **tes di web browser** masukkan:
 crkosongdua.test / crkosongsatu.test
 ```
 
-Jika Keluar halaman Laravel, berarti BERHASIL
+Jika Keluar halaman Laravel, berarti BERHASIL <br>
 Jika tidak, cek ulang siapa tau ada kesalahan (kalo bingung tanya AI)
 
-untuk menghentikan tinggal di **compose down**
+untuk menghentikan DOCKER tinggal di **compose down**
 
 ```sh
 dcd
@@ -464,6 +457,7 @@ Ketik ini di Terminal VS Code atau lanjutin di WSL tadi juga gapapa:
 ```sh
 cd /root/perkuliahan/crkosongdua
 ```
+crkosongdua adalah contoh proyek
 
 lalu
 
@@ -471,19 +465,19 @@ lalu
 code .
 ```
 
-nanti akan otomastis masuk ke **Visual Studio Code**, dan sedang membuat Folder kelas masing-masing
+nanti akan otomastis masuk ke **Visual Studio Code** <br>
 _pastikan extension untuk WSL sudah dipasang di VSCode kamu!!!_
 
 ---
 
 ```text
-Kalo sudah sampai tahap itu, Mantapp kamu sudah selesai Set-up nya :), tinggal praktikum
-tanggal 13 April 2026 🤩
+Kalo sudah sampai tahap itu, Mantapp kamu sudah selesai Set-up nya :),
+tinggal praktikum tanggal 13 April 2026 🤩
 ```
 
 ---
 
-## SETUP TERAKHIR DIDALAM TERMINAL WSL
+## SETUP TERAKHIR DIDALAM TERMINAL WSL (opsional)
 1. SETELAH SELESAI SEMUA BISA LAKUKAN SOURCE ULANG ZSHRC ATAU BISA COPY PASTE CMD DIBAWAH INI
 ```php
 source /root/.zshrc
@@ -517,6 +511,9 @@ dcp testing
 ```php
 dca make:middleware Testing
 ```
+
+---
+
 # UNTUK PENGGUNA MAC OS
 ## BISA LANGSUNG EKSEKUSI
 ```php
