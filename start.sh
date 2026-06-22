@@ -531,11 +531,20 @@ dcp() {
         return 0
     fi
 
-    git commit -m "$*"
+    git commit -m "$*" || {
+        echo "❌ Commit gagal."
+        return 1
+    }
 
-    git pull origin main --rebase
+    git pull origin main --rebase || {
+        echo "❌ Pull/Rebase gagal. Cek internet, conflict, atau koneksi GitHub."
+        return 1
+    }
 
-    git push origin main
+    git push origin main || {
+        echo "❌ Push gagal. Cek internet/DNS/GitHub."
+        return 1
+    }
 
     echo "✅ Push berhasil..., Mantappp 👍"
 }
