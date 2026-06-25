@@ -1,4 +1,4 @@
-# 🚀 Ilham Boilerplate 2026
+# Boilerplate 2026
 
 Welcome to the official documentation.
 

@@ -1,0 +1,74 @@
+site_name: Boilerplate 2026
+site_description: Laravel Boilerplate with Docker, WSL, Filament & GitHub Automation
+site_author: Ilham Firmansyah
+site_url: https://illhammf.github.io/boilerplate
+
+repo_url: https://github.com/illhammf/boilerplate
+repo_name: illhammf/boilerplate
+
+theme:
+  name: material
+
+  language: en
+
+  # logo: assets/logo.png
+  # favicon: assets/logo.png
+
+  palette:
+
+    - scheme: default
+      primary: blue
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Dark Mode
+
+    - scheme: slate
+      primary: blue
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Light Mode
+
+  features:
+
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+
+    - search.highlight
+    - search.suggest
+
+    - content.code.copy
+    - content.code.annotate
+
+plugins:
+  - search
+
+markdown_extensions:
+
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+
+  - Home: index.md
+
+  - Installation:
+      - installation.md
+
+  - Commands:
+      - commands.md
+
+  - Docker:
+      - docker.md
+
+  - GitHub:
+      - github.md
+
+  - FAQ:
+      - faq.md
