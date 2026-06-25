@@ -29,4 +29,10 @@ Welcome to the official documentation.
 
 ---
 
-Happy Coding ❤️
+## Update
+
+Testing auto deployment.
+
+```sh
+Semoga Bermanfaat dan Happy Coding ❤️
+```
