@@ -1,45 +1,62 @@
 #!/bin/bash
 set -euo pipefail
 
-# Check for required input
 if [ $# -ne 1 ]; then
-  echo "❌ Usage: $0 <repo-prefix> (e.g., dev- or test-)"
+  echo "❌ Usage: $0 <repo-prefix>"
+  echo "✅ Example: $0 test-"
   exit 1
 fi
 
 PREFIX="$1"
 
-# Load GitHub credentials from files
-GITHUB_USER=$(<.github-user)
-GITHUB_TOKEN=$(<.github-token)
-
-echo "📥 Fetching repositories for user: $GITHUB_USER with prefix: $PREFIX"
-
-# Fetch repos matching prefix
-REPOS=$(curl -s -u "$GITHUB_USER:$GITHUB_TOKEN" \
-  "https://api.github.com/user/repos?per_page=100" | \
-  jq -r --arg prefix "^$PREFIX" '.[] | select(.name | test($prefix)) | .full_name')
-
-# Check if any matching repos
-if [ -z "$REPOS" ]; then
-  echo "ℹ️ No repositories found with prefix '$PREFIX'"
-  exit 0
-fi
-
-# Confirm before deleting
-echo "❗ Repositories to be deleted:"
-echo "$REPOS" | sed 's/^/  🔻 /'
-read -rp "⚠️ Are you sure you want to delete these repositories? (y/N) " CONFIRM
-if [[ "$CONFIRM" != "y" ]]; then
-  echo "❌ Cancelled."
+if [ ! -f ".github-user" ] || [ ! -f ".github-token" ]; then
+  echo "❌ File .github-user atau .github-token tidak ditemukan."
   exit 1
 fi
 
-# Delete repos
+GITHUB_USER=$(<.github-user)
+GITHUB_TOKEN=$(<.github-token)
+
+echo "🔍 Mencari repository milik: $GITHUB_USER"
+echo "🏷️ Prefix: $PREFIX"
+echo ""
+
+REPOS=$(curl -s \
+  -H "Authorization: Bearer $GITHUB_TOKEN" \
+  -H "Accept: application/vnd.github+json" \
+  "https://api.github.com/user/repos?per_page=100" | \
+  jq -r --arg prefix "^$PREFIX" '.[] | select(.name | test($prefix)) | .full_name')
+
+if [ -z "$REPOS" ]; then
+  echo "ℹ️ Tidak ada repository dengan prefix '$PREFIX'."
+  exit 0
+fi
+
+echo "⚠️ Repository yang akan dihapus:"
+echo "$REPOS" | sed 's/^/  🗑️  /'
+echo ""
+
+read -rp "Ketik DELETE untuk lanjut menghapus: " CONFIRM
+
+if [ "$CONFIRM" != "DELETE" ]; then
+  echo "❌ Dibatalkan."
+  exit 1
+fi
+
 for REPO in $REPOS; do
-  echo "🚨 Deleting $REPO..."
-  curl -s -X DELETE -u "$GITHUB_USER:$GITHUB_TOKEN" \
-    "https://api.github.com/repos/$REPO"
+  echo "🚨 Menghapus $REPO..."
+  STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+    -X DELETE \
+    -H "Authorization: Bearer $GITHUB_TOKEN" \
+    -H "Accept: application/vnd.github+json" \
+    "https://api.github.com/repos/$REPO")
+
+  if [ "$STATUS" = "204" ]; then
+    echo "✅ Berhasil menghapus $REPO"
+  else
+    echo "❌ Gagal menghapus $REPO. Status: $STATUS"
+  fi
 done
 
-echo "✅ Done."
+echo ""
+echo "✅ Selesai."
