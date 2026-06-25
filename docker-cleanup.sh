@@ -1,26 +1,37 @@
 #!/bin/bash
+set -euo pipefail
 
-echo "⚠️  This script will REMOVE all Docker containers, images, volumes, and networks."
-echo -n "Are you sure you want to continue? (y/N): "
-read confirm
-if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
-  echo "❌ Aborted."
+echo "⚠️  WARNING!"
+echo "Script ini akan menghapus:"
+echo "- Semua Docker containers"
+echo "- Semua Docker volumes"
+echo "- Semua user-defined networks"
+echo "- Semua unused images/cache"
+echo ""
+echo "Database project Docker bisa ikut hilang."
+echo ""
+
+read -rp "Ketik CLEAN untuk lanjut: " confirm
+if [[ "$confirm" != "CLEAN" ]]; then
+  echo "❌ Dibatalkan."
   exit 1
 fi
 
-echo "🛑 Stopping and removing all containers..."
-docker rm -f $(docker ps -aq) 2>/dev/null || echo "No containers to remove."
+if ! docker info >/dev/null 2>&1; then
+  echo "❌ Docker tidak berjalan."
+  exit 1
+fi
 
-#echo "🧹 Removing all images..."
-#docker rmi -f $(docker images -q) 2>/dev/null || echo "No images to remove."
+echo "🛑 Menghapus semua containers..."
+docker rm -f $(docker ps -aq) 2>/dev/null || echo "ℹ️ Tidak ada container."
 
-echo "📦 Removing all volumes..."
-docker volume rm -f $(docker volume ls -q) 2>/dev/null || echo "No volumes to remove."
+echo "📦 Menghapus semua volumes..."
+docker volume rm -f $(docker volume ls -q) 2>/dev/null || echo "ℹ️ Tidak ada volume."
 
-echo "🌐 Removing all user-defined networks..."
-docker network rm $(docker network ls | grep -v "bridge\|host\|none" | awk '{print $1}') 2>/dev/null || echo "No user-defined networks to remove."
+echo "🌐 Menghapus user-defined networks..."
+docker network rm $(docker network ls --format '{{.Name}}' | grep -vE '^(bridge|host|none)$') 2>/dev/null || echo "ℹ️ Tidak ada network custom."
 
-echo "🧼 Running Docker system prune (just in case)..."
+echo "🧼 Membersihkan image/cache..."
 docker system prune -a --volumes -f
 
-echo "✅ Docker environment fully cleaned."
+echo "✅ Docker environment berhasil dibersihkan."
