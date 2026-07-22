@@ -546,7 +546,7 @@ dcp() {
         return 1
     }
 
-    echo "✅ Push berhasil..., Mantappp 👍"
+    echo "✅ Push berhasil..., sii Gantengg 👍"
 }
 dcd() { local P=$(docker ps --format "{{.Names}}" | grep _php | head -n 1 | cut -d'_' -f1); [ -n "$P" ] && docker compose -p "$P" down || echo "❌ Tidak dapat mendeteksi proyek."; }
 alias dcu='docker compose up -d'
@@ -621,9 +621,9 @@ final_steps() {
   echo "   dcu            # docker compose up -d"
   echo "   dcd            # docker compose down"
   echo "   dca            # docker exec -it <php_container> php artisan"
-  echo "   dcp \"pesan\"    # git add, commit, pull --rebase, push dengan pesan commit"
-  echo "   dcm ModelName  # buat model + migration + seeder + controller + policy + filament resource"
-  echo "   dcr ModelName  # hapus file model, migration, seeder, controller, policy, filament resource"
+  echo "   dcp \"pesan\"  # git add, commit, pull --rebase, push dengan pesan commit"
+  echo "   dcm ModelName  # otomatis buat model + migration + seeder + controller + policy + filament resource"
+  echo "   dcr ModelName  # otomatis hapus file model, migration, seeder, controller, policy, filament resource"
   echo ""
 
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
