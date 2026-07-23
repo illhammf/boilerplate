@@ -494,7 +494,7 @@ Ilham Boilerplate $(date +%Y)
 
 > "Konsistensi Mengalahkan Bakat Saat Bakat Tidak Muncul."
 
-🔥 Happy Coding!!!
+🔥 Happy Coding Yaa!!!
 EOF
 
   git init
