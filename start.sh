@@ -304,9 +304,13 @@ create_github_repo() {
 
 # Generate README otomatis
 cat > README.md <<EOF
-### ⚠️ Noted:
-Readme ini dibuat secara otomatis menggunakan skrip start.sh dengan template yang sudah disiapkan. 
-Anda bisa mengeditnya sesuai kebutuhan setelah proyek dibuat
+## ⚠️ Noted:
+Readme ini dibuat secara otomatis menggunakan skrip `start.sh` dengan template yang sudah disiapkan. 
+Anda bisa mengeditnya sesuai kebutuhan setelah proyek dibuat.
+
+### in English:
+This README was automatically generated using the `start.sh` script and a pre-configured template.
+You can edit it as needed after the project has been created.
 
 <div align="center">
 
