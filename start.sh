@@ -477,7 +477,7 @@ tests/
 | \`dcd\` | Matikan Docker Compose |
 | \`dca\` | Masuk ke dalam kontainer PHP dan jalankan perintah Artisan |
 | \`dcp "pesan"\` | Git add, commit, pull --rebase, dan push dengan pesan commit |
-| \`dcm ModelName\` | | Buat model Laravel lengkap dengan migration, seeder, controller, policy, dan resource Filament |
+| \`dcm ModelName\` | Buat model Laravel lengkap dengan migration, seeder, controller, policy, dan resource Filament |
 | \`dcr ModelName\` | Hapus file model, migration, seeder, controller, policy, dan resource Filament untuk model yang diberikan |
 | \`code .\` | Buka proyek di Visual Studio Code |
 
