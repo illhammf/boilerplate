@@ -464,7 +464,7 @@ generate_readme() {
   local PROJECT_NAME="$2"
   local DOMAIN="$3"
   local REPO_URL="${GITHUB_REMOTE%.git}"
-  [ -z "$REPO_URL" ] && REPO_URL="https://github.com/$GITHUB_USER"
+  [ -z "$REPO_URL" ] && REPO_URL="https://github.com/$GITHUB_USER/${PROJECT_NAME}-${YEAR}"
 
   log_info "📝 Membuat README.md..."
   cat <<'EOF' | sed \
