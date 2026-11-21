@@ -1034,8 +1034,13 @@ init_git_and_push() {
   log_info "Push biasa gagal, mencoba ulang dengan token GitHub..."
   local AUTH
   AUTH=$(printf '%s:%s' "$GITHUB_USER" "$GITHUB_TOKEN_OK" | base64 | tr -d '\n')
+  # Kalau DNS WSL macet, arahkan git ke IP github.com hasil DoH (butuh git >= 2.37)
+  local RESOLVE_OPT=()
+  local GH_IP
+  GH_IP=$(_doh_resolve github.com)
+  [ -n "$GH_IP" ] && RESOLVE_OPT=(-c "http.curloptResolve=github.com:443:$GH_IP")
   if git -c credential.helper= -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $AUTH" \
-    push -u origin main; then
+    "${RESOLVE_OPT[@]}" push -u origin main; then
     log_success "Proyek berhasil di-push ke GitHub (via token)."
     STATUS_PUSH="ok"
   else
