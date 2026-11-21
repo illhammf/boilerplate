@@ -11,17 +11,18 @@ server {
     listen 443 ssl;
     listen [::]:443 ssl;
     server_tokens off;
-
     server_name {{DOMAIN}};
     root /var/www/html/public;
-
     index index.php index.html;
 
     ssl_certificate     /etc/nginx/ssl/{{DOMAIN}}.crt;
     ssl_certificate_key /etc/nginx/ssl/{{DOMAIN}}.key;
-
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
+
+    # Batas ukuran request (upload foto KTP/KK dari HP).
+    # Batas per file tetap diatur di validasi Laravel.
+    client_max_body_size 20M;
 
     location / {
         try_files $uri $uri/ /index.php?$query_string;
@@ -34,7 +35,9 @@ server {
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
     }
 
-    location ~ /\.ht {
+    # Tolak akses ke semua file tersembunyi (.htaccess, .git, dll.),
+    # kecuali .well-known yang dipakai untuk verifikasi sertifikat.
+    location ~ /\.(?!well-known).* {
         deny all;
     }
 }
