@@ -1,5 +1,15 @@
 #!/bin/bash
-set -euo pipefail # Untuk memastikan skrip berhenti jika ada error, variabel tidak di-set, atau perintah gagal
+# =============================================================================
+#  Ilham Boilerplate - Generator proyek Laravel + Filament + Docker (WSL)
+#  Pemakaian : ./start.sh nama-proyek
+#  Hasil     : /root/perkuliahan/<nama-proyek> dengan domain https://<nama>.test
+# =============================================================================
+set -euo pipefail # Berhenti jika ada error, variabel belum di-set, atau pipe gagal
+
+# --- Variabel global (diisi selama skrip berjalan) ---
+YEAR="$(date +%Y)"
+GITHUB_USER="unknown" # Diisi oleh create_github_repo
+GITHUB_REMOTE=""      # URL repo GitHub; kosong = tidak push ke GitHub
 
 # --- Fungsi Bantuan untuk Pencatatan Log ---
 log_info() { echo "ℹ️  $1"; }
@@ -10,19 +20,25 @@ log_error() {
   exit 1
 }
 
-# --- Fungsi Utama ---
+# =============================================================================
+#  ALUR UTAMA
+# =============================================================================
 main() {
   # Validasi awal
   if [ -z "${1:-}" ]; then
     log_error " 📁 Harap berikan nama proyek. Contoh: ./start.sh proyek-saya"
   fi
 
-  # Inisialisasi variabel proyek
+  # Sanitasi nama proyek: huruf kecil, spasi/underscore jadi '-', buang karakter lain
   local PROJECT_NAME="$1"
-  PROJECT_NAME=$(echo "$PROJECT_NAME" \
-    | tr '[:upper:]' '[:lower:]' \
-    | tr ' _' '-' \
-    | sed 's/[^a-z0-9-]//g')
+  PROJECT_NAME=$(echo "$PROJECT_NAME" |
+    tr '[:upper:]' '[:lower:]' |
+    tr ' _' '-' |
+    sed 's/[^a-z0-9-]//g')
+
+  if [ -z "$PROJECT_NAME" ]; then
+    log_error " 📁 Nama proyek tidak valid setelah disanitasi. Gunakan huruf, angka, atau '-'."
+  fi
 
   local SCRIPT_DIR
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -52,33 +68,38 @@ main() {
   # Langkah akhir
   start_containers
   create_github_repo "$SCRIPT_DIR" "$PROJECT_NAME"
-  final_steps "$ROOT_DIR" "$PROJECT_NAME" "$SCRIPT_DIR"
+  generate_readme "$ROOT_DIR" "$PROJECT_NAME" "$DOMAIN"
+  init_git_and_push
+  final_steps "$ROOT_DIR" "$PROJECT_NAME"
 }
 
-# --- Fungsi-fungsi Pembantu ---
-# Fungsi untuk memeriksa apakah semua dependensi yang diperlukan sudah terpasang
+# =============================================================================
+#  FUNGSI-FUNGSI PEMBANTU
+# =============================================================================
+
+# Memeriksa apakah semua dependensi yang diperlukan sudah terpasang
 check_dependencies() {
-    log_info "🔍 Memeriksa dependensi..."
-    for cmd in git docker mkcert code nc; do
-        if ! command -v "$cmd" &>/dev/null; then
-            log_error "⚠️ Perintah '$cmd' tidak ditemukan. Harap install terlebih dahulu!!!."
-        fi
-    done
-    if ! docker compose version &>/dev/null; then
-        log_error "⚠️ Perintah 'docker compose' tidak berfungsi. Pastikan Docker Anda mendukung Compose v2 atau Docker Desktop terbaru."
+  log_info "🔍 Memeriksa dependensi..."
+  for cmd in git docker mkcert code nc curl sed; do
+    if ! command -v "$cmd" &>/dev/null; then
+      log_error "⚠️ Perintah '$cmd' tidak ditemukan. Harap install terlebih dahulu!!!."
     fi
+  done
+  if ! docker compose version &>/dev/null; then
+    log_error "⚠️ Perintah 'docker compose' tidak berfungsi. Pastikan Docker Anda mendukung Compose v2 atau Docker Desktop terbaru."
+  fi
 }
 
-# Fungsi untuk membuat struktur direktori yang diperlukan untuk proyek
+# Membuat struktur direktori proyek
 setup_directories() {
   local ROOT_DIR="$1"
   log_info " 📁 Membuat struktur folder di $ROOT_DIR..."
   mkdir -p "$ROOT_DIR/db/conf.d" "$ROOT_DIR/nginx/ssl" "$ROOT_DIR/php" "$ROOT_DIR/src"
-  # Buat .gitkeep agar direktori src tidak kosong, sesuai logika entrypoint
+  # .gitkeep agar direktori src tidak kosong (sesuai logika entrypoint)
   touch "$ROOT_DIR/src/.gitkeep"
 }
 
-# Fungsi untuk menyalin file template ke dalam struktur proyek yang baru dibuat
+# Menyalin file template ke proyek baru
 copy_template_files() {
   local ROOT_DIR="$1"
   local TEMPLATE_DIR="$2"
@@ -86,26 +107,28 @@ copy_template_files() {
   if [ ! -d "$TEMPLATE_DIR" ]; then
     log_error "⚠️ Direktori template '$TEMPLATE_DIR' tidak ditemukan."
   fi
-  # Salin semua template kecuali entrypoint
+
+  # Salin konfigurasi Docker (kecuali entrypoint, disalin terpisah di bawah)
   cp "$TEMPLATE_DIR/db/my.cnf" "$ROOT_DIR/db/conf.d/"
   cp "$TEMPLATE_DIR/nginx/Dockerfile" "$ROOT_DIR/nginx/"
   cp "$TEMPLATE_DIR/php/Dockerfile" "$ROOT_DIR/php/"
   cp "$TEMPLATE_DIR/php/www.conf" "$ROOT_DIR/php/"
   cp "$TEMPLATE_DIR/php/local.ini" "$ROOT_DIR/php/"
-  # Salin seluruh template aplikasi Laravel Anda dari src
+
+  # Salin seluruh template aplikasi Laravel dari src
   log_info " 📂 Menyalin template aplikasi dari template/src/..."
   if [ -z "$(ls -A "$TEMPLATE_DIR/src/")" ]; then log_error "⚠️ Direktori 'template/src' kosong!"; fi
   cp -a "$TEMPLATE_DIR/src/." "$ROOT_DIR/src/"
 
-  # Salin skrip entrypoint Anda dan berikan izin eksekusi
+  # Salin skrip entrypoint dan beri izin eksekusi
   if [ ! -f "$TEMPLATE_DIR/php/docker-entrypoint.sh.template" ]; then
-      log_error "File 'template/php/docker-entrypoint.sh.template' tidak ditemukan!"
+    log_error "File 'template/php/docker-entrypoint.sh.template' tidak ditemukan!"
   fi
   cp "$TEMPLATE_DIR/php/docker-entrypoint.sh.template" "$ROOT_DIR/php/docker-entrypoint.sh"
   chmod +x "$ROOT_DIR/php/docker-entrypoint.sh"
 }
 
-# Fungsi untuk menghasilkan sertifikat SSL menggunakan mkcert
+# Membuat sertifikat SSL lokal dengan mkcert
 generate_ssl_certs() {
   local ROOT_DIR="$1"
   local DOMAIN="$2"
@@ -127,7 +150,7 @@ generate_ssl_certs() {
   log_success " 💌 Sertifikat SSL berhasil dibuat dan berlokasi di $NGINX_SSL"
 }
 
-# Fungsi untuk menghasilkan file konfigurasi dengan menggantikan placeholder
+# Membuat file konfigurasi dari template (nginx, .env, .env.example, .gitignore)
 render_configs() {
   local ROOT_DIR="$1"
   local PROJECT_NAME="$2"
@@ -135,48 +158,74 @@ render_configs() {
   local TEMPLATE_DIR="$4"
 
   log_info "📄 Menghasilkan file-file konfigurasi..."
-  # Nginx Config
+
+  # Nginx: ganti placeholder {{DOMAIN}} dengan domain proyek
   sed -e "s|{{DOMAIN}}|$DOMAIN|g" "$TEMPLATE_DIR/nginx/default.conf.template" >"$ROOT_DIR/nginx/default.conf"
 
-  # .env file untuk Docker Compose di host
+  # .env root: dibaca Docker Compose. TIDAK di-commit (lihat .gitignore).
+  # File src/.env (milik Laravel) dibuat otomatis oleh docker-entrypoint.sh.
   cat <<EOF >"$ROOT_DIR/.env"
 # Variabel ini digunakan oleh docker-compose.yml
 COMPOSE_PROJECT_NAME=${PROJECT_NAME}
 PROJECT_NAME=${PROJECT_NAME}
+
+# Ubah ke true lalu jalankan 'docker compose up -d' untuk mengaktifkan Xdebug
+XDEBUG=false
 EOF
 
-  # .gitignore
-  cat <<EOF >"$ROOT_DIR/.gitignore"
-# Docker data
+  # .env.example: salinan .env yang DI-COMMIT, supaya anggota tim
+  # cukup menjalankan 'cp .env.example .env' setelah clone.
+  cat <<EOF >"$ROOT_DIR/.env.example"
+# Salin file ini menjadi .env:  cp .env.example .env
+# Variabel ini digunakan oleh docker-compose.yml
+COMPOSE_PROJECT_NAME=${PROJECT_NAME}
+PROJECT_NAME=${PROJECT_NAME}
+
+# Ubah ke true lalu jalankan 'docker compose up -d' untuk mengaktifkan Xdebug
+XDEBUG=false
+EOF
+
+  # .gitignore proyek (src/ punya .gitignore Laravel sendiri untuk storage, dll.)
+  cat <<'EOF' >"$ROOT_DIR/.gitignore"
+# Data database MariaDB (dibuat otomatis oleh kontainer)
 db/data/
+
+# Sertifikat SSL lokal (dibuat ulang di tiap laptop dengan mkcert)
+nginx/ssl/
+
 # Dependencies
 src/vendor/
 src/node_modules/
+
 # IDE & OS files
 .idea/
 .vscode/
 .DS_Store
-# Environment files
+Thumbs.db
+
+# Environment files (berisi nilai lokal). .env.example TETAP di-commit.
 .env
 src/.env
 EOF
 }
 
-# Fungsi untuk menghasilkan file docker-compose.yml dengan konfigurasi dinamis
+# Membuat docker-compose.yml
 generate_docker_compose() {
   local ROOT_DIR="$1"
 
   log_info "🐋 Membuat file docker-compose.yml..."
-  cat <<EOF >"$ROOT_DIR/docker-compose.yml"
+  # Heredoc pakai 'EOF' (dikutip) supaya ${...} ditulis apa adanya
+  # dan baru dibaca Docker Compose dari file .env.
+  cat <<'EOF' >"$ROOT_DIR/docker-compose.yml"
 services:
   php:
     build:
       context: ./php
-    container_name: \${COMPOSE_PROJECT_NAME}_php
+    container_name: ${COMPOSE_PROJECT_NAME}_php
     # Teruskan variabel PROJECT_NAME ke dalam kontainer
     environment:
-      - PROJECT_NAME=\${PROJECT_NAME}
-      - XDEBUG=\${XDEBUG:-false}
+      - PROJECT_NAME=${PROJECT_NAME}
+      - XDEBUG=${XDEBUG:-false}
     volumes:
       - ./src:/var/www/html
     depends_on:
@@ -185,7 +234,7 @@ services:
   nginx:
     build:
       context: ./nginx
-    container_name: \${COMPOSE_PROJECT_NAME}_nginx
+    container_name: ${COMPOSE_PROJECT_NAME}_nginx
     ports:
       - "443:443"
       - "80:80"
@@ -197,7 +246,7 @@ services:
       - php
   db:
     image: mariadb:10.11
-    container_name: \${COMPOSE_PROJECT_NAME}_db
+    container_name: ${COMPOSE_PROJECT_NAME}_db
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
@@ -208,7 +257,7 @@ services:
       - "13306:3306"
     environment:
       # Database ini akan dibuat saat kontainer pertama kali dijalankan
-      MYSQL_DATABASE: \${PROJECT_NAME}
+      MYSQL_DATABASE: ${PROJECT_NAME}
       MYSQL_ROOT_PASSWORD: p455w0rd
     volumes:
       - ./db/conf.d:/etc/mysql/conf.d
@@ -217,96 +266,179 @@ EOF
   log_success " 🐳 File docker-compose.yml berhasil dibuat..."
 }
 
-# Fungsi untuk memperbarui file hosts di WSL dan Windows
+# Cek apakah file hosts sudah memuat "127.0.0.1 <domain>" (persis, bukan sebagian)
+_hosts_has_entry() {
+  local FILE="$1"
+  local DOMAIN="$2"
+  local D_RE="${DOMAIN//./\\.}" # titik di-escape agar dibaca harfiah oleh regex
+  grep -qE "^[[:space:]]*127\.0\.0\.1[[:space:]]+(.*[[:space:]])?${D_RE}([[:space:]]|$)" "$FILE" 2>/dev/null
+}
+
+# Menambahkan domain ke file hosts WSL dan Windows
 update_hosts_file() {
   local HOST_ENTRY="$1"
   local DOMAIN="$2"
 
   log_info "Memeriksa file hosts..."
-  if ! grep -q "$HOST_ENTRY" /etc/hosts; then
-    log_info "Menambahkan $DOMAIN ke /etc/hosts WSL (membutuhkan sudo)..."
-    echo "$HOST_ENTRY" | sudo tee -a /etc/hosts >/dev/null
+
+  # --- Hosts WSL ---
+  if ! _hosts_has_entry /etc/hosts "$DOMAIN"; then
+    log_info "Menambahkan $DOMAIN ke /etc/hosts WSL..."
+    if [ "$(id -u)" -eq 0 ]; then
+      echo "$HOST_ENTRY" >>/etc/hosts
+    else
+      echo "$HOST_ENTRY" | sudo tee -a /etc/hosts >/dev/null
+    fi
   fi
-  local win_hosts_path="/c/Windows/System32/drivers/etc/hosts"
-  if grep -q "$HOST_ENTRY" "$win_hosts_path" &>/dev/null; then
+
+  # --- Hosts Windows ---
+  # Lokasi drive C berbeda tergantung wsl.conf: /mnt/c (bawaan) atau /c (root = /)
+  local WIN_ROOT=""
+  for d in /mnt/c /c; do
+    if [ -d "$d/Windows/System32" ]; then
+      WIN_ROOT="$d"
+      break
+    fi
+  done
+
+  if [ -z "$WIN_ROOT" ] || ! command -v powershell.exe &>/dev/null; then
+    log_warning "Drive Windows/PowerShell tidak terdeteksi. Tambahkan '$HOST_ENTRY' ke hosts Windows secara manual."
+    return
+  fi
+
+  local win_hosts_path="$WIN_ROOT/Windows/System32/drivers/etc/hosts"
+  if _hosts_has_entry "$win_hosts_path" "$DOMAIN"; then
     log_success "$DOMAIN sudah ada di file hosts Windows."
     return
   fi
+
   log_info "Mencoba memperbarui file hosts Windows..."
   log_warning " ⚠️  PERHATIKAN DESKTOP ANDA! Pop-up UAC akan muncul meminta izin Administrator."
   local ps_script_path_win="C:\\Windows\\Temp\\update_hosts.ps1"
-  local ps_script_path_wsl="/c/Windows/Temp/update_hosts.ps1"
-  cat <<EOF > "$ps_script_path_wsl"
+  local ps_script_path_wsl="$WIN_ROOT/Windows/Temp/update_hosts.ps1"
+
+  if ! cat <<EOF >"$ps_script_path_wsl"; then
 \$HostFile = "C:\\Windows\\System32\\drivers\\etc\\hosts"
 \$Entry = "$HOST_ENTRY"
-if (!(Select-String -Path \$HostFile -Pattern \$Entry -Quiet)) { Add-Content -Path \$HostFile -Value \$Entry }
+if (!(Select-String -Path \$HostFile -Pattern \$Entry -SimpleMatch -Quiet)) { Add-Content -Path \$HostFile -Value \$Entry }
 EOF
-  powershell.exe -Command "Start-Process powershell.exe -ArgumentList '-ExecutionPolicy Bypass -File \"$ps_script_path_win\"' -Verb RunAs"
+    log_warning "Tidak bisa menulis skrip sementara di Windows Temp. Tambahkan '$HOST_ENTRY' ke hosts Windows secara manual."
+    return
+  fi
+
+  # '|| true' supaya skrip tidak berhenti kalau UAC ditolak
+  powershell.exe -Command "Start-Process powershell.exe -ArgumentList '-ExecutionPolicy Bypass -File \"$ps_script_path_win\"' -Verb RunAs" || true
   sleep 3
-  if grep -q "$HOST_ENTRY" "$win_hosts_path" &>/dev/null; then
+  if _hosts_has_entry "$win_hosts_path" "$DOMAIN"; then
     log_success "File hosts Windows berhasil diperbarui."
   else
-    log_warning "Gagal memperbarui file hosts Windows. Lakukan secara manual!!!"
+    log_warning "Gagal memperbarui file hosts Windows. Tambahkan '$HOST_ENTRY' secara manual!!!"
   fi
 }
 
-# Fungsi untuk menampilkan langkah akhir dan informasi proyek setelah setup selesai
+# Menjalankan kontainer Docker
 start_containers() {
-  read -p "🚀 Mulai proyek dengan Docker Compose sekarang? (y/n): " start_now
+  local start_now=""
+  read -r -p "🚀 Mulai proyek dengan Docker Compose sekarang? (y/n): " start_now
   if [[ "$start_now" =~ ^[Yy]$ ]]; then
     log_info " 🛠️ Membangun dan menjalankan kontainer..."
-    docker compose up -d --build
-    log_success " 📢 Kontainer sedang berjalan di latar belakang. Anda bisa melihat log dengan 'docker compose logs -f'"
+    if docker compose up -d --build; then
+      log_success " 📢 Kontainer berjalan di latar belakang. Lihat log dengan 'docker compose logs -f php'"
+      log_info " ⏳ Setup pertama (composer install + migrate) butuh beberapa menit. Pantau lewat log di atas."
+    else
+      log_warning "Gagal menjalankan kontainer. Cek error di atas, lalu jalankan 'dcu' dari folder proyek."
+    fi
   fi
 }
 
-# Fungsi untuk membuat repositori GitHub dan melakukan push awal
+# Membuat repositori GitHub (belum push; push dilakukan di init_git_and_push)
 create_github_repo() {
   local SCRIPT_DIR="$1"
   local PROJECT_NAME="$2"
-  read -p " 🌐 Mau buat repositori GitHub untuk proyek ini? (y/n): " create_repo
+
+  # Ambil username yang tersimpan (dipakai juga di README walau tidak membuat repo)
+  if [ -f "$SCRIPT_DIR/.github-user" ]; then
+    GITHUB_USER=$(<"$SCRIPT_DIR/.github-user")
+  fi
+
+  local create_repo=""
+  read -r -p " 🌐 Mau buat repositori GitHub untuk proyek ini? (y/n): " create_repo
   if [[ ! "$create_repo" =~ ^[Yy]$ ]]; then
     return
   fi
-  local GITHUB_USER
-  if [ -f "$SCRIPT_DIR/.github-user" ]; then
-    GITHUB_USER=$(<"$SCRIPT_DIR/.github-user")
-  else
-    read -p "👤 Masukkan username GitHub Anda: " GITHUB_USER
+
+  if [ ! -f "$SCRIPT_DIR/.github-user" ]; then
+    read -r -p "👤 Masukkan username GitHub Anda: " GITHUB_USER
     echo "$GITHUB_USER" >"$SCRIPT_DIR/.github-user"
   fi
-  local GITHUB_TOKEN
+
+  local GITHUB_TOKEN=""
   if [ -f "$SCRIPT_DIR/.github-token" ]; then
     GITHUB_TOKEN=$(<"$SCRIPT_DIR/.github-token")
   else
-    read -s -p "🔑 Masukkan GitHub Personal Access Token Anda (token klasik): " GITHUB_TOKEN
+    read -r -s -p "🔑 Masukkan GitHub Personal Access Token Anda (token klasik): " GITHUB_TOKEN
     echo
     echo "$GITHUB_TOKEN" >"$SCRIPT_DIR/.github-token"
+    chmod 600 "$SCRIPT_DIR/.github-token" # hanya bisa dibaca pemilik
   fi
-  local REPO_NAME="${PROJECT_NAME}-$(date +%Y)"
-  log_info " 🚨 Mencoba membuat repositori GitHub: $GITHUB_USER/$REPO_NAME"
+
+  # Default private (lebih aman). Anggota tim/dosen bisa ditambahkan sebagai collaborator.
+  local is_private=""
+  local PRIVATE="true"
+  read -r -p " 🔒 Jadikan repositori private? (Y/n): " is_private
+  if [[ "$is_private" =~ ^[Nn]$ ]]; then
+    PRIVATE="false"
+  fi
+
+  local REPO_NAME="${PROJECT_NAME}-${YEAR}"
+  log_info " 🚨 Mencoba membuat repositori GitHub: $GITHUB_USER/$REPO_NAME (private: $PRIVATE)"
+
+  # '|| true' supaya skrip tidak berhenti kalau internet putus
   local RESPONSE
-  RESPONSE=$(curl -s -w "\n%{http_code}" -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" -d "{\"name\":\"$REPO_NAME\", \"private\":false}" "https://api.github.com/user/repos")
-  local BODY
+  RESPONSE=$(curl -s -w "\n%{http_code}" \
+    -H "Authorization: Bearer $GITHUB_TOKEN" \
+    -H "Accept: application/vnd.github.v3+json" \
+    -d "{\"name\":\"$REPO_NAME\", \"private\":$PRIVATE}" \
+    "https://api.github.com/user/repos") || true
+
+  local BODY STATUS
   BODY=$(echo "$RESPONSE" | sed '$d')
-  local STATUS
   STATUS=$(echo "$RESPONSE" | tail -n1)
-  local GITHUB_HTTPS="https://github.com/$GITHUB_USER/$REPO_NAME.git"
+
   if [ "$STATUS" = "201" ]; then
     log_success " 🤩 Repositori GitHub '$REPO_NAME' berhasil dibuat..."
   elif [ "$STATUS" = "422" ]; then
     log_warning "Repositori '$REPO_NAME' sudah ada. Melanjutkan..."
   else
-    log_error " ⚠️ Gagal membuat repositori. Status: $STATUS. Pesan: $BODY"
+    # Tidak menghentikan skrip: proyek lokal tetap jadi, repo bisa dibuat manual nanti
+    log_warning "Gagal membuat repositori. Status: ${STATUS:-tidak ada respon}. Pesan: $BODY"
+    log_warning "Proyek tetap dibuat secara lokal tanpa GitHub."
     return
   fi
-  log_info " 🚨 Inisialisasi Git dan push awal..."
 
-# Generate README otomatis
-cat > README.md <<EOF
+  GITHUB_REMOTE="https://github.com/$GITHUB_USER/$REPO_NAME.git"
+}
+
+# Membuat README.md otomatis.
+# Heredoc dikutip ('EOF') sehingga backtick dan $ ditulis apa adanya (tidak
+# dieksekusi Bash). Nilai dinamis memakai placeholder {{...}} yang diganti sed.
+generate_readme() {
+  local ROOT_DIR="$1"
+  local PROJECT_NAME="$2"
+  local DOMAIN="$3"
+  local REPO_URL="${GITHUB_REMOTE%.git}"
+  [ -z "$REPO_URL" ] && REPO_URL="https://github.com/$GITHUB_USER"
+
+  log_info "📝 Membuat README.md..."
+  cat <<'EOF' | sed \
+    -e "s|{{PROJECT_NAME}}|$PROJECT_NAME|g" \
+    -e "s|{{DOMAIN}}|$DOMAIN|g" \
+    -e "s|{{YEAR}}|$YEAR|g" \
+    -e "s|{{GITHUB_USER}}|$GITHUB_USER|g" \
+    -e "s|{{REPO_URL}}|$REPO_URL|g" >"$ROOT_DIR/README.md"
 ## ⚠️ Noted:
 ### Indonesia:
-Readme ini dibuat secara otomatis menggunakan skrip `start.sh` dengan template yang sudah disiapkan. 
+Readme ini dibuat secara otomatis menggunakan skrip `start.sh` dengan template yang sudah disiapkan.
 Anda bisa mengeditnya sesuai kebutuhan setelah proyek dibuat.
 
 ### in English:
@@ -315,19 +447,19 @@ You can edit it as needed after the project has been created.
 
 <div align="center">
 
-# 🚀 $PROJECT_NAME
+# 🚀 {{PROJECT_NAME}}
 
-### Laravel Boilerplate Project $(date +%Y)
+### Laravel Boilerplate Project {{YEAR}}
 
 Built with ❤️ using Laravel, Docker, WSL & Filament
 
-![Laravel](https://img.shields.io/badge/Laravel-11-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)
+![Laravel](https://img.shields.io/badge/Laravel-12-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)
 ![PHP](https://img.shields.io/badge/PHP-8.3-777BB4?style=for-the-badge&logo=php&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
-![MariaDB](https://img.shields.io/badge/MariaDB-003545?style=for-the-badge&logo=mariadb&logoColor=white)
+![MariaDB](https://img.shields.io/badge/MariaDB-10.11-003545?style=for-the-badge&logo=mariadb&logoColor=white)
 ![Filament](https://img.shields.io/badge/Filament-v3-F59E0B?style=for-the-badge)
 
-[![GitHub](https://img.shields.io/badge/Open-GitHub-black?style=for-the-badge&logo=github)](https://github.com/$GITHUB_USER/$PROJECT_NAME-$(date +%Y))
+[![GitHub](https://img.shields.io/badge/Open-GitHub-black?style=for-the-badge&logo=github)]({{REPO_URL}})
 
 </div>
 
@@ -335,7 +467,7 @@ Built with ❤️ using Laravel, Docker, WSL & Filament
 
 ## 📖 Tentang Project
 
-**$PROJECT_NAME** merupakan aplikasi berbasis Laravel yang dibuat menggunakan **Ilham Boilerplate $(date +%Y)**.
+**{{PROJECT_NAME}}** merupakan aplikasi berbasis Laravel yang dibuat menggunakan **Ilham Boilerplate {{YEAR}}**.
 
 Project ini sudah dikonfigurasi dengan berbagai kebutuhan modern untuk pengembangan aplikasi web.
 
@@ -343,12 +475,12 @@ Project ini sudah dikonfigurasi dengan berbagai kebutuhan modern untuk pengemban
 
 ## ✨ Fitur Bawaan
 
-- ✅ Laravel
+- ✅ Laravel 12
 - ✅ Docker Environment
 - ✅ Nginx Web Server
 - ✅ PHP 8.3
-- ✅ MariaDB
-- ✅ Filament Admin Panel
+- ✅ MariaDB 10.11
+- ✅ Filament Admin Panel (v3)
 - ✅ GitHub Integration
 - ✅ WSL Ubuntu Support
 - ✅ HTTPS Local Domain
@@ -356,48 +488,79 @@ Project ini sudah dikonfigurasi dengan berbagai kebutuhan modern untuk pengemban
 
 ---
 
+## 👥 Setup untuk Anggota Tim (setelah clone)
+
+Jalankan dari WSL Ubuntu. Pastikan Docker, mkcert, dan git sudah terpasang.
+
+```bash
+# 1. Clone dan masuk ke folder proyek
+git clone {{REPO_URL}}.git
+cd {{PROJECT_NAME}}-{{YEAR}}
+
+# 2. Buat file .env untuk Docker Compose
+cp .env.example .env
+
+# 3. Buat sertifikat SSL lokal
+mkdir -p nginx/ssl
+mkcert -install
+mkcert -cert-file nginx/ssl/{{DOMAIN}}.crt -key-file nginx/ssl/{{DOMAIN}}.key {{DOMAIN}} localhost 127.0.0.1
+
+# 4. Daftarkan domain ke hosts WSL
+echo "127.0.0.1 {{DOMAIN}}" | sudo tee -a /etc/hosts
+
+# 5. Jalankan kontainer (composer install, src/.env, APP_KEY, dan migrate dibuat otomatis)
+docker compose up -d --build
+docker compose logs -f php   # tunggu sampai muncul "Ready to serve!"
+```
+
+Tambahkan juga baris `127.0.0.1 {{DOMAIN}}` ke file hosts Windows
+(`C:\Windows\System32\drivers\etc\hosts`, buka Notepad sebagai Administrator).
+
+---
+
 ## 🚀 Quick Start
 
 ### Menjalankan Docker
 
-\`\`\`bash
+```bash
 docker compose up -d
-\`\`\`
+```
 
 atau
 
-\`\`\`bash
+```bash
 dcu
-\`\`\`
+```
 
 ### Masuk Container PHP
 
-\`\`\`bash
+```bash
 docker compose exec php bash
-\`\`\`
+```
 
 ### Menjalankan Migration
 
-\`\`\`bash
-php artisan migrate
-\`\`\`
+```bash
+dca migrate
+```
 
 ### Menjalankan Seeder
 
-\`\`\`bash
-php artisan db:seed
-\`\`\`
+```bash
+dca db:seed
+```
 
 ### Mematikan Docker
-\`\`\`bash
+
+```bash
 docker compose down
-\`\`\`
+```
 
 atau
 
-\`\`\`bash
+```bash
 dcd
-\`\`\`
+```
 
 ---
 
@@ -405,15 +568,15 @@ dcd
 
 ### Website Proyek
 
-\`\`\`text
-https://$PROJECT_NAME.test
-\`\`\`
+```text
+https://{{DOMAIN}}
+```
 
 ### Admin Panel
 
-\`\`\`text
-https://$PROJECT_NAME.test/admin
-\`\`\`
+```text
+https://{{DOMAIN}}/admin
+```
 
 ---
 
@@ -423,23 +586,30 @@ https://$PROJECT_NAME.test/admin
 |----------|----------|
 | Nginx | 80 / 443 |
 | PHP-FPM | Internal |
-| MariaDB | 13306 |
+| MariaDB | 13306 (host) |
+
+Koneksi Navicat: host `127.0.0.1`, port `13306`, user `root`, password `p455w0rd`.
 
 ---
 
 ## 📂 Struktur Project
 
-\`\`\`text
-app/
-bootstrap/
-config/
-database/
-public/
-resources/
-routes/
-storage/
-tests/
-\`\`\`
+```text
+.
+├── db/            # Konfigurasi & data MariaDB
+├── nginx/         # Konfigurasi Nginx & sertifikat SSL lokal
+├── php/           # Dockerfile, entrypoint, konfigurasi PHP
+└── src/           # Aplikasi Laravel
+    ├── app/
+    ├── bootstrap/
+    ├── config/
+    ├── database/
+    ├── public/
+    ├── resources/
+    ├── routes/
+    ├── storage/
+    └── tests/
+```
 
 ---
 
@@ -471,27 +641,32 @@ tests/
 ---
 
 ## Command Line Tools
+
 | Command | Deskripsi |
 |---------|-----------|
-| \`dcu\` | Jalankan Docker Compose |
-| \`dcd\` | Matikan Docker Compose |
-| \`dca\` | Masuk ke dalam kontainer PHP dan jalankan perintah Artisan |
-| \`dcp "pesan"\` | Git add, commit, pull --rebase, dan push dengan pesan commit |
-| \`dcm ModelName\` | Buat model Laravel lengkap dengan migration, seeder, controller, policy, dan resource Filament |
-| \`dcr ModelName\` | Hapus file model, migration, seeder, controller, policy, dan resource Filament untuk model yang diberikan |
-| \`code .\` | Buka proyek di Visual Studio Code |
+| `dcu` | Jalankan Docker Compose |
+| `dcd` | Matikan Docker Compose proyek ini |
+| `dca <perintah>` | Jalankan perintah Artisan di kontainer PHP (contoh: `dca migrate`) |
+| `dci` | Jalankan `php artisan project:init` |
+| `dcp "pesan"` | Git add, commit, pull --rebase, dan push dengan pesan commit |
+| `dcm ModelName` | Buat model + migration + seeder + controller |
+| `dcf ModelName` | Buat Filament resource dari kolom tabel (jalankan setelah `dca migrate`) |
+| `dcr ModelName` | Hapus model, migration, seeder, controller, policy, dan Filament resource |
+| `code .` | Buka proyek di Visual Studio Code |
+
+Alur membuat fitur CRUD baru: `dcm Nama` → isi file migration → `dca migrate` → `dcf Nama`.
 
 ---
 
 ## 👨‍💻 Developer
 
-**$GITHUB_USER**
+**{{GITHUB_USER}}**
 
 Generated automatically using:
 
-\`\`\`text
-Ilham Boilerplate $(date +%Y)
-\`\`\`
+```text
+Ilham Boilerplate {{YEAR}}
+```
 
 ---
 
@@ -501,78 +676,201 @@ Ilham Boilerplate $(date +%Y)
 
 🔥 Happy Coding Yaa!!!
 EOF
-
-  git init
-  git branch -M main
-  git add .
-  git commit -m "🎉 Initial commit"
-  git remote add origin "$GITHUB_HTTPS"
-  git push -u origin main
-  log_success "Proyek berhasil di-push otomatis ke GitHub Nih..."
 }
 
-# Fungsi untuk memperbarui file .zshrc dengan alias dan fungsi khusus untuk proyek
+# Inisialisasi Git lokal, commit awal, lalu push jika repo GitHub tersedia
+init_git_and_push() {
+  log_info " 🚨 Inisialisasi Git dan commit awal..."
+  git init -q
+  git branch -M main
+  git add .
+
+  # Commit butuh identitas git (user.name & user.email)
+  if ! git commit -q -m "🎉 Initial commit"; then
+    log_warning "Commit gagal. Set identitas dulu: git config --global user.name \"Nama\" && git config --global user.email \"email@contoh.com\""
+    log_warning "Lalu jalankan manual: git commit -m \"🎉 Initial commit\""
+    return
+  fi
+  log_success "Commit awal berhasil."
+
+  if [ -z "$GITHUB_REMOTE" ]; then
+    return
+  fi
+
+  git remote add origin "$GITHUB_REMOTE"
+  if git push -u origin main; then
+    log_success "Proyek berhasil di-push otomatis ke GitHub Nih..."
+  else
+    log_warning "Push gagal (cek internet/kredensial). Coba lagi nanti dengan: git push -u origin main"
+  fi
+}
+
+# Memperbarui ~/.zshrc dengan alias dan fungsi untuk proyek boilerplate
 update_zshrc() {
   local ZSHRC_FILE="$1"
   log_info "Memperbarui fungsi dan alias di $ZSHRC_FILE..."
-  sed -i.bak '/# === BOILERPLATE START ===/,/# === BOILERPLATE END ===/d' "$ZSHRC_FILE"
+  touch "$ZSHRC_FILE" # pastikan file ada agar sed tidak gagal
+
+  # Hapus blok lama (termasuk baris judulnya) agar tidak dobel
+  sed -i.bak \
+    -e '/# === ALIAS & FUNCTIONS UNTUK PROYEK BOILERPLATE ===/d' \
+    -e '/# === BOILERPLATE START ===/,/# === BOILERPLATE END ===/d' \
+    "$ZSHRC_FILE"
+
   cat <<'EOF' >>"$ZSHRC_FILE"
 
 # === ALIAS & FUNCTIONS UNTUK PROYEK BOILERPLATE ===
 # === BOILERPLATE START ===
-_get_php_container_name() { docker ps --filter "name=_php" --format "{{.Names}}" | head -n 1; } 
-dcr() { [ -z "$1" ] && { echo "❌ Usage: dcr <ModelName>"; return 1; }; local C=$(_get_php_container_name); [ -z "$C" ] && { echo "❌ Kontainer PHP tidak ditemukan."; return 1; }; local N="$1"; local NS=$(echo "$N" | sed -E 's/([a-z])([A-Z])/\1_\2/g' | tr '[:upper:]' '[:lower:]'); local NP="${NS}s"; echo "🗑 Menghapus file untuk '$N'..."; docker exec "$C" rm -f "app/Models/$N.php" "app/Http/Controllers/${N}Controller.php" "database/seeders/${N}Seeder.php" "app/Policies/${N}Policy.php"; docker exec "$C" find database/migrations -type f -name "*create_${NP}_table.php" -delete; docker exec "$C" rm -rf "app/Filament/Admin/Resources/${N}Resource.php"; }
-dcm() { [ -z "$1" ] && { echo "❌ Usage: dcm <ModelName>"; return 1; }; local C=$(_get_php_container_name); [ -z "$C" ] && { echo "❌ Kontainer PHP tidak ditemukan."; return 1; }; docker exec -it "$C" php artisan make:model "$1" -msc; docker exec -it "$C" php artisan make:filament-resource "$1" --generate; }
-dcp() {
-    [ $# -eq 0 ] && {
-        echo "❌ Usage: dcp \"commit message\""
-        return 1
-    }
+# Hapus alias lama dengan nama yang sama agar definisi fungsi di bawah tidak bentrok
+unalias dca dci dcd dcm dcr dcf 2>/dev/null || true
 
-    git add .
-
-    if git diff --cached --quiet; then
-        echo "⚠️ Tidak ada perubahan"
-        return 0
+# Cari kontainer PHP milik proyek di folder saat ini (dari COMPOSE_PROJECT_NAME di
+# .env root proyek). Jika tidak ketemu, pakai kontainer *_php pertama yang berjalan.
+_get_php_container_name() {
+  local ROOT P
+  ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+  if [ -f "$ROOT/.env" ]; then
+    P=$(grep -E '^COMPOSE_PROJECT_NAME=' "$ROOT/.env" | head -n 1 | cut -d '=' -f 2- | tr -d '\r"')
+    if [ -n "$P" ] && docker ps --format '{{.Names}}' | grep -qx "${P}_php"; then
+      echo "${P}_php"
+      return 0
     fi
-
-    git commit -m "$*" || {
-        echo "❌ Commit gagal."
-        return 1
-    }
-
-    git pull origin main --rebase || {
-        echo "❌ Pull/Rebase gagal. Cek internet, conflict, atau koneksi GitHub."
-        return 1
-    }
-
-    git push origin main || {
-        echo "❌ Push gagal. Cek internet/DNS/GitHub."
-        return 1
-    }
-
-    echo "✅ Push berhasil..., sii Gantengg 👍"
+  fi
+  docker ps --filter "name=_php" --format '{{.Names}}' | head -n 1
 }
-dcd() { local P=$(docker ps --format "{{.Names}}" | grep _php | head -n 1 | cut -d'_' -f1); [ -n "$P" ] && docker compose -p "$P" down || echo "❌ Tidak dapat mendeteksi proyek."; }
+
+# Versi "wajib ada": tampilkan error jika kontainer PHP tidak berjalan
+_php_c() {
+  local C
+  C=$(_get_php_container_name)
+  if [ -z "$C" ]; then
+    echo "❌ Kontainer PHP tidak ditemukan. Jalankan 'dcu' dari folder proyek dulu." >&2
+    return 1
+  fi
+  echo "$C"
+}
+
+# dca <perintah artisan>  -> contoh: dca migrate, dca db:seed
+dca() {
+  local C
+  C=$(_php_c) || return 1
+  docker exec -it "$C" php artisan "$@"
+}
+
+# dci -> php artisan project:init
+dci() {
+  local C
+  C=$(_php_c) || return 1
+  docker exec -it "$C" php artisan project:init
+}
+
+# dcm <Model> -> model + migration + seeder + controller (TANPA Filament resource,
+# karena --generate butuh tabel yang sudah dimigrasi)
+dcm() {
+  [ -z "$1" ] && { echo "❌ Usage: dcm <ModelName>"; return 1; }
+  local C
+  C=$(_php_c) || return 1
+  docker exec -it "$C" php artisan make:model "$1" -msc || return 1
+  echo ""
+  echo "✅ Model, migration, seeder, dan controller '$1' berhasil dibuat."
+  echo "👉 Langkah berikutnya:"
+  echo "   1. Isi kolom di file migration (database/migrations/..._create_..._table.php)"
+  echo "   2. (Opsional) Tentukan nama tabel di model: protected \$table = 'nama_tabel';"
+  echo "   3. dca migrate"
+  echo "   4. dcf $1   # buat Filament resource dari kolom tabel"
+}
+
+# dcf <Model> -> Filament resource yang form & tabelnya dibaca dari kolom database
+dcf() {
+  [ -z "$1" ] && { echo "❌ Usage: dcf <ModelName>"; return 1; }
+  local C
+  C=$(_php_c) || return 1
+  docker exec -it "$C" php artisan make:filament-resource "$1" --generate
+}
+
+# dcr <Model> -> hapus model, migration, seeder, controller, policy, Filament resource
+dcr() {
+  [ -z "$1" ] && { echo "❌ Usage: dcr <ModelName>"; return 1; }
+  local C N TABLE ans
+  C=$(_php_c) || return 1
+  N="$1"
+
+  # Nama tabel dihitung dengan aturan Laravel (Str::plural), sama seperti make:model -m
+  TABLE=$(docker exec "$C" php -r "require 'vendor/autoload.php'; echo Illuminate\Support\Str::snake(Illuminate\Support\Str::pluralStudly('$N'));" 2>/dev/null)
+  [ -z "$TABLE" ] && { echo "❌ Gagal menghitung nama tabel untuk '$N'."; return 1; }
+
+  echo "⚠️  Akan menghapus semua file untuk '$N' (migration: *_create_${TABLE}_table.php)."
+  echo "   Jika migration-nya sudah dijalankan, rollback dulu: dca migrate:rollback"
+  printf "Lanjutkan? (y/n): "
+  read ans
+  [[ "$ans" =~ ^[Yy]$ ]] || { echo "Dibatalkan."; return 0; }
+
+  docker exec "$C" rm -f \
+    "app/Models/$N.php" \
+    "app/Http/Controllers/${N}Controller.php" \
+    "database/seeders/${N}Seeder.php" \
+    "app/Policies/${N}Policy.php"
+  docker exec "$C" find database/migrations -type f -name "*_create_${TABLE}_table.php" -delete
+  # Filament v3 membuat XResource.php DAN folder XResource/ (berisi Pages)
+  docker exec "$C" rm -rf \
+    "app/Filament/Admin/Resources/${N}Resource.php" \
+    "app/Filament/Admin/Resources/${N}Resource" \
+    "app/Filament/Resources/${N}Resource.php" \
+    "app/Filament/Resources/${N}Resource"
+  echo "🗑  File untuk '$N' berhasil dihapus."
+}
+
+# dcp "pesan" -> add, commit, pull --rebase, push
+dcp() {
+  [ $# -eq 0 ] && {
+    echo "❌ Usage: dcp \"commit message\""
+    return 1
+  }
+
+  git add .
+
+  if git diff --cached --quiet; then
+    echo "⚠️ Tidak ada perubahan"
+    return 0
+  fi
+
+  git commit -m "$*" || {
+    echo "❌ Commit gagal."
+    return 1
+  }
+
+  git pull origin main --rebase || {
+    echo "❌ Pull/Rebase gagal. Cek internet, conflict, atau koneksi GitHub."
+    return 1
+  }
+
+  git push origin main || {
+    echo "❌ Push gagal. Cek internet/DNS/GitHub."
+    return 1
+  }
+
+  echo "✅ Push berhasil..., sii Gantengg 👍"
+}
+
+# dcd -> matikan kontainer proyek ini
+dcd() {
+  local C
+  C=$(_php_c) || return 1
+  docker compose -p "${C%_php}" down
+}
+
 alias dcu='docker compose up -d'
-alias dca='docker exec -it $(_get_php_container_name) php artisan'
-alias dci='docker exec -it $(docker ps --filter "name=_php" --format "{{.Names}}" | head -n 1) php artisan project:init'
 # === BOILERPLATE END ===
 EOF
 }
 
-# Fungsi untuk menampilkan langkah akhir dan informasi proyek setelah setup selesai
+# Menampilkan ringkasan dan langkah akhir setelah setup selesai
 final_steps() {
   local ROOT_DIR="$1"
   local PROJECT_NAME="$2"
-  local SCRIPT_DIR="$3"
-  local GITHUB_USER="unknown"
 
-  if [ -f "$SCRIPT_DIR/.github-user" ]; then
-    GITHUB_USER=$(<"$SCRIPT_DIR/.github-user")
-  fi
   log_info "🧠 Membuka proyek di Visual Studio Code..."
-  code "$ROOT_DIR"
+  code "$ROOT_DIR" || log_warning "VS Code gagal dibuka. Buka manual dengan: code $ROOT_DIR"
   log_success "🎉 Aishh Gantengg, Project '$PROJECT_NAME' berhasil dibuat!"
   echo ""
   echo "╔══════════════════════════════════════════════════════════╗"
@@ -581,7 +879,7 @@ final_steps() {
   echo ""
 
   echo "🚀 Nama Project : $PROJECT_NAME"
-  echo "📅 Tahun        : $(date +%Y)"
+  echo "📅 Tahun        : $YEAR"
   echo "👨‍💻 Developer    : $GITHUB_USER"
   echo ""
 
@@ -597,7 +895,7 @@ final_steps() {
   echo ""
 
   echo "📁 Folder Project"
-  echo "   /root/perkuliahan/${PROJECT_NAME}"
+  echo "   $ROOT_DIR"
   echo ""
 
   echo "🐳 Docker Status"
@@ -605,7 +903,11 @@ final_steps() {
   echo ""
 
   echo "🔗 Repository GitHub"
-  echo "   https://github.com/${GITHUB_USER}/${PROJECT_NAME}-"$(date +%Y)
+  if [ -n "$GITHUB_REMOTE" ]; then
+    echo "   ${GITHUB_REMOTE%.git}"
+  else
+    echo "   (tidak dibuat)"
+  fi
   echo ""
 
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -613,10 +915,10 @@ final_steps() {
 
   echo "💡 Langkah Selanjutnya"
   echo ""
-  echo "1. code ."
+  echo "1. docker compose logs -f php   # tunggu sampai 'Ready to serve!'"
   echo "2. docker compose ps"
-  echo "3. php artisan migrate"
-  echo "4. php artisan db:seed"
+  echo "3. dca migrate                   # (sudah otomatis dijalankan entrypoint)"
+  echo "4. dca db:seed"
   echo ""
 
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -625,41 +927,41 @@ final_steps() {
   echo "🛠️ Commands"
   echo "   dcu            # docker compose up -d"
   echo "   dcd            # docker compose down"
-  echo "   dca            # docker exec -it <php_container> php artisan"
-  echo "   dcp \"pesan\"  # git add, commit, pull --rebase, push dengan pesan commit"
-  echo "   dcm ModelName  # otomatis buat model + migration + seeder + controller + policy + filament resource"
-  echo "   dcr ModelName  # otomatis hapus file model, migration, seeder, controller, policy, filament resource"
+  echo "   dca <cmd>      # php artisan <cmd> di kontainer PHP"
+  echo "   dci            # php artisan project:init"
+  echo "   dcp \"pesan\"    # git add, commit, pull --rebase, push"
+  echo "   dcm ModelName  # model + migration + seeder + controller"
+  echo "   dcf ModelName  # Filament resource (setelah dca migrate)"
+  echo "   dcr ModelName  # hapus model, migration, seeder, controller, policy, resource"
   echo ""
 
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo ""
 
-
-  QUOTES=(
-  "🔥 Keep Coding!"
-  "🚀 Push Your Limits!"
-  "💡 Learn Something New Today!"
-  "🎯 Consistency Beats Talent!"
-  "⚡ Small Progress Every Day!"
-  "🏆 One Commit Closer To Success!"
-  "☕ Drink Coffee, Write Code, Repeat!"
-  "🐛 No Bug Is Permanent!"
-  "📚 Belajar Hari Ini, Jago Besok!"
-  "👨‍💻 Build Something Awesome!"
-  "🌙 Late Night Coding Session Activated!"
-  "🚢 Ship It!"
-  "🤩 Si Ganteng!!!"
+  local QUOTES=(
+    "🔥 Keep Coding!"
+    "🚀 Push Your Limits!"
+    "💡 Learn Something New Today!"
+    "🎯 Consistency Beats Talent!"
+    "⚡ Small Progress Every Day!"
+    "🏆 One Commit Closer To Success!"
+    "☕ Drink Coffee, Write Code, Repeat!"
+    "🐛 No Bug Is Permanent!"
+    "📚 Belajar Hari Ini, Jago Besok!"
+    "👨‍💻 Build Something Awesome!"
+    "🌙 Late Night Coding Session Activated!"
+    "🚢 Ship It!"
+    "🤩 Si Ganteng!!!"
   )
 
   echo "Ada quote untuk kamu nih..."
-  RANDOM_QUOTE=${QUOTES[$RANDOM % ${#QUOTES[@]}]}
-
+  local RANDOM_QUOTE=${QUOTES[$RANDOM % ${#QUOTES[@]}]}
   echo "$RANDOM_QUOTE"
   echo ""
   echo "Semoga project ini bisa jadi awal yang baik untuk perjalanan coding kamu. Jangan lupa untuk terus belajar dan eksplorasi hal baru. Happy coding!!!"
   echo ""
 
-  echo "Generated by Ilham Boilerplate " $(date +%Y)
+  echo "Generated by Ilham Boilerplate $YEAR"
 
   log_info "Direktori/Lokasi proyek: $ROOT_DIR"
   log_info "Memuat ulang shell Zsh untuk menerapkan alias baru..."
