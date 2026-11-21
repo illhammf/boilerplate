@@ -793,6 +793,7 @@ EOF
 }
 
 # Inisialisasi Git lokal, commit awal, lalu push jika repo GitHub tersedia
+# Inisialisasi Git lokal, commit awal, lalu push jika repo GitHub tersedia
 init_git_and_push() {
   log_info " 🚨 Inisialisasi Git dan commit awal..."
   git init -q
@@ -803,19 +804,33 @@ init_git_and_push() {
   if ! git commit -q -m "🎉 Initial commit"; then
     log_warning "Commit gagal. Set identitas dulu: git config --global user.name \"Nama\" && git config --global user.email \"email@contoh.com\""
     log_warning "Lalu jalankan manual: git commit -m \"🎉 Initial commit\""
-    return
+    return 0
   fi
   log_success "Commit awal berhasil."
 
   if [ -z "$GITHUB_REMOTE" ]; then
-    return
+    return 0
   fi
 
-  git remote add origin "$GITHUB_REMOTE"
+  # set-url kalau origin sudah ada, add kalau belum
+  git remote add origin "$GITHUB_REMOTE" 2>/dev/null || git remote set-url origin "$GITHUB_REMOTE"
+
+  # Coba push biasa dulu (pakai credential helper yang sudah ada di laptop)
   if git push -u origin main; then
     log_success "Proyek berhasil di-push otomatis ke GitHub Nih..."
+    return 0
+  fi
+
+  # Cadangan: push memakai token yang sudah terverifikasi. Token hanya dipakai
+  # untuk perintah ini, tidak disimpan di .git/config maupun URL remote.
+  log_info "Push biasa gagal, mencoba ulang dengan token GitHub..."
+  local AUTH
+  AUTH=$(printf '%s:%s' "$GITHUB_USER" "$GITHUB_TOKEN_OK" | base64 | tr -d '\n')
+  if git -c credential.helper= -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $AUTH" \
+    push -u origin main; then
+    log_success "Proyek berhasil di-push ke GitHub (via token)."
   else
-    log_warning "Push gagal (cek internet/kredensial). Coba lagi nanti dengan: git push -u origin main"
+    log_warning "Push gagal. Coba lagi nanti dengan: git push -u origin main"
   fi
 }
 
