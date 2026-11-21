@@ -451,8 +451,10 @@ create_github_repo() {
       break
       ;;
     401)
-      log_warning "Token ditolak GitHub (401): salah, kedaluwarsa, atau sudah di-regenerate. Masukkan token yang baru."
-      rm -f "$TOKEN_FILE"
+      # File token TIDAK dihapus: tetap bisa diedit manual (nano ~/boilerplate/.github-token).
+      # File baru ditimpa setelah token pengganti lolos verifikasi.
+      log_warning "Token ditolak GitHub (401): salah, kedaluwarsa, atau sudah di-regenerate."
+      log_warning "Masukkan token baru di bawah, atau batalkan (Ctrl+C) lalu perbarui lewat: nano $TOKEN_FILE"
       GITHUB_TOKEN=""
       ;;
     000)
