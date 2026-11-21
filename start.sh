@@ -692,10 +692,15 @@ create_github_repo() {
       GITHUB_TOKEN=""
       ;;
     000)
-      log_warning "Tidak ada koneksi ke api.github.com (bukan masalah token). Cek: curl -I https://api.github.com"
-      log_warning "Proyek tetap dibuat secara lokal tanpa GitHub."
-      STATUS_GITHUB="fail"
-      return 0
+      # Bukan masalah token: koneksi/DNS. Token TIDAK diganti; tawarkan coba lagi.
+      log_warning "Tidak ada koneksi ke api.github.com (bukan masalah token)."
+      local again=""
+      read -r -p " 🔁 Coba lagi? Perbaiki dulu internet/DNS-nya kalau perlu (Y/n): " again
+      if [[ "$again" =~ ^[Nn]$ ]]; then
+        log_warning "Proyek tetap dibuat secara lokal tanpa GitHub."
+        STATUS_GITHUB="fail"
+        return 0
+      fi
       ;;
     *)
       log_warning "Gagal memverifikasi token. Status: $GH_STATUS. Pesan: $GH_BODY"
