@@ -2,6 +2,10 @@
 .github-token
 .github-user
 
+# Environment files (berisi nilai lokal). .env.example TETAP di-commit.
+.env
+src/.env
+
 # Penanda internal skrip
 .docker_cleanup_done
 
