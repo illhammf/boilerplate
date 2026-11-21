@@ -352,107 +352,184 @@ start_containers() {
 }
 
 # Membuat repositori GitHub (belum push; push dilakukan di init_git_and_push)
+# Memanggil GitHub API dengan retry jika koneksi gagal.
+# Pemakaian : _github_api METHOD URL TOKEN [JSON]
+# Hasil     : variabel global GH_STATUS, GH_BODY, GH_HEADERS, GH_ERR
+_github_api() {
+  local METHOD="$1" URL="$2" TOKEN="$3" DATA="${4:-}"
+  local HDR_FILE ERR_FILE OUT attempt=1
+  HDR_FILE=$(mktemp)
+  ERR_FILE=$(mktemp)
+  GH_STATUS="000"
+  GH_BODY=""
+  GH_HEADERS=""
+  GH_ERR=""
+
+  while [ "$attempt" -le 3 ]; do
+    local ARGS=(-sS --connect-timeout 10 --max-time 30 -X "$METHOD"
+      -D "$HDR_FILE" -w "\n%{http_code}"
+      -H "Authorization: Bearer $TOKEN"
+      -H "Accept: application/vnd.github+json"
+      -H "X-GitHub-Api-Version: 2022-11-28")
+    [ -n "$DATA" ] && ARGS+=(-d "$DATA")
+
+    # -sS: senyap, tapi pesan error curl tetap ditangkap ke ERR_FILE
+    OUT=$(curl "${ARGS[@]}" "$URL" 2>"$ERR_FILE") || true
+    GH_STATUS=$(printf '%s' "$OUT" | tail -n1)
+    [[ "$GH_STATUS" =~ ^[0-9]{3}$ ]] || GH_STATUS="000"
+    GH_BODY=$(printf '%s' "$OUT" | sed '$d')
+    GH_ERR=$(cat "$ERR_FILE")
+    [ "$GH_STATUS" != "000" ] && break
+
+    log_warning "Percobaan $attempt/3: tidak bisa terhubung ke GitHub. $GH_ERR"
+    attempt=$((attempt + 1))
+    [ "$attempt" -le 3 ] && sleep 5
+  done
+
+  GH_HEADERS=$(cat "$HDR_FILE")
+  rm -f "$HDR_FILE" "$ERR_FILE"
+}
+
+# Meminta token dari keyboard (input disembunyikan). Prompt ke stderr,
+# token yang sudah dibersihkan dicetak ke stdout.
+_ask_github_token() {
+  local T=""
+  read -r -s -p "🔑 Masukkan GitHub Personal Access Token (classic, centang scope 'repo'): " T
+  echo >&2
+  printf '%s' "$T" | tr -d '[:space:]'
+}
+
+# Variabel global tambahan: token yang SUDAH terverifikasi (dipakai saat push)
+GITHUB_TOKEN_OK=""
+
+# Membuat repositori GitHub (push dilakukan di init_git_and_push)
 create_github_repo() {
   local SCRIPT_DIR="$1"
   local PROJECT_NAME="$2"
+  local USER_FILE="$SCRIPT_DIR/.github-user"
+  local TOKEN_FILE="$SCRIPT_DIR/.github-token"
 
-  # Ambil username yang tersimpan (dipakai juga di README walau tidak membuat repo)
-  if [ -f "$SCRIPT_DIR/.github-user" ]; then
-    GITHUB_USER=$(tr -d '[:space:]' <"$SCRIPT_DIR/.github-user")
+  # Username tersimpan (dipakai juga di README walau tidak membuat repo)
+  if [ -f "$USER_FILE" ]; then
+    GITHUB_USER=$(tr -d '[:space:]' <"$USER_FILE")
   fi
 
   local create_repo=""
   read -r -p " 🌐 Mau buat repositori GitHub untuk proyek ini? (y/n): " create_repo
   if [[ ! "$create_repo" =~ ^[Yy]$ ]]; then
-    return
+    return 0
   fi
 
-  if [ ! -f "$SCRIPT_DIR/.github-user" ]; then
-    read -r -p "👤 Masukkan username GitHub Anda: " GITHUB_USER
-    echo "$GITHUB_USER" >"$SCRIPT_DIR/.github-user"
-  fi
-
+  # --- 1. Ambil token: dari file, atau minta dari keyboard ---
   local GITHUB_TOKEN=""
-  if [ -f "$SCRIPT_DIR/.github-token" ]; then
-    GITHUB_TOKEN=$(<"$SCRIPT_DIR/.github-token")
-  else
-    read -r -s -p "🔑 Masukkan GitHub Personal Access Token Anda (token klasik): " GITHUB_TOKEN
-    echo
+  if [ -f "$TOKEN_FILE" ]; then
+    GITHUB_TOKEN=$(tr -d '[:space:]' <"$TOKEN_FILE")
+    log_info "Memakai token tersimpan di $TOKEN_FILE"
   fi
-  # Buang spasi, tab, newline, dan \r (sering ikut saat copy-paste dari Windows)
-  GITHUB_TOKEN=$(printf '%s' "$GITHUB_TOKEN" | tr -d '[:space:]')
-  if [ -z "$GITHUB_TOKEN" ]; then
-    log_warning "Token GitHub kosong. Proyek tetap dibuat secara lokal tanpa GitHub."
-    return
-  fi
-  # Simpan versi yang sudah dibersihkan, hanya bisa dibaca pemilik
-  printf '%s\n' "$GITHUB_TOKEN" >"$SCRIPT_DIR/.github-token"
-  chmod 600 "$SCRIPT_DIR/.github-token"
 
-  # Default private (lebih aman). Anggota tim/dosen bisa ditambahkan sebagai collaborator.
-  local is_private=""
-  local PRIVATE="true"
+  # --- 2. Verifikasi token ke GitHub (GET /user). Kalau ditolak, langsung
+  #        minta token baru di run yang sama (maks 3 kali), tidak perlu ulang start.sh ---
+  local asked=0
+  while :; do
+    if [ -z "$GITHUB_TOKEN" ]; then
+      asked=$((asked + 1))
+      if [ "$asked" -gt 3 ]; then
+        log_warning "3 kali token gagal. Proyek tetap dibuat secara lokal tanpa GitHub."
+        return 0
+      fi
+      GITHUB_TOKEN=$(_ask_github_token)
+      if [ -z "$GITHUB_TOKEN" ]; then
+        log_warning "Token kosong, coba lagi."
+        continue
+      fi
+    fi
+
+    log_info "🔐 Memverifikasi token ke GitHub..."
+    _github_api GET "https://api.github.com/user" "$GITHUB_TOKEN"
+    case "$GH_STATUS" in
+    200)
+      break
+      ;;
+    401)
+      log_warning "Token ditolak GitHub (401): salah, kedaluwarsa, atau sudah di-regenerate. Masukkan token yang baru."
+      rm -f "$TOKEN_FILE"
+      GITHUB_TOKEN=""
+      ;;
+    000)
+      log_warning "Tidak ada koneksi ke api.github.com (bukan masalah token). Cek: curl -I https://api.github.com"
+      log_warning "Proyek tetap dibuat secara lokal tanpa GitHub."
+      return 0
+      ;;
+    *)
+      log_warning "Gagal memverifikasi token. Status: $GH_STATUS. Pesan: $GH_BODY"
+      log_warning "Proyek tetap dibuat secara lokal tanpa GitHub."
+      return 0
+      ;;
+    esac
+  done
+
+  # Token valid: simpan (hanya bisa dibaca pemilik)
+  printf '%s\n' "$GITHUB_TOKEN" >"$TOKEN_FILE"
+  chmod 600 "$TOKEN_FILE"
+
+  # Username diambil langsung dari pemilik token, jadi tidak mungkin salah ketik
+  local LOGIN
+  LOGIN=$(printf '%s' "$GH_BODY" | grep -m1 -o '"login": *"[^"]*"' | sed 's/.*"\([^"]*\)"$/\1/' || true)
+  if [ -n "$LOGIN" ]; then
+    if [ "$GITHUB_USER" != "unknown" ] && [ "$GITHUB_USER" != "$LOGIN" ]; then
+      log_warning "Username tersimpan '$GITHUB_USER' berbeda dengan pemilik token '$LOGIN'. Memakai '$LOGIN'."
+    fi
+    GITHUB_USER="$LOGIN"
+    printf '%s\n' "$GITHUB_USER" >"$USER_FILE"
+  fi
+  log_success "Token valid. Login sebagai: $GITHUB_USER"
+
+  # Token classic (ghp_...) wajib punya scope 'repo' untuk membuat repositori
+  local SCOPES
+  SCOPES=$(printf '%s' "$GH_HEADERS" | grep -i '^x-oauth-scopes:' | head -n1 | cut -d: -f2- | tr -d '\r' || true)
+  if [[ "$GITHUB_TOKEN" == ghp_* ]] && ! printf '%s' "$SCOPES" | grep -qE '(^|[[:space:],])repo([[:space:]]*,|[[:space:]]*$)'; then
+    log_warning "Token tidak punya scope 'repo' (scope saat ini:${SCOPES:- tidak ada})."
+    log_warning "Buat ulang token classic dengan mencentang 'repo', lalu hapus file $TOKEN_FILE."
+    log_warning "Proyek tetap dibuat secara lokal tanpa GitHub."
+    return 0
+  fi
+
+  # --- 3. Pilih visibilitas, lalu buat repositori ---
+  local is_private="" PRIVATE="true"
   read -r -p " 🔒 Jadikan repositori private? (Y/n): " is_private
   if [[ "$is_private" =~ ^[Nn]$ ]]; then
     PRIVATE="false"
   fi
 
   local REPO_NAME="${PROJECT_NAME}-${YEAR}"
-  log_info " 🚨 Mencoba membuat repositori GitHub: $GITHUB_USER/$REPO_NAME (private: $PRIVATE)"
+  log_info " 🚨 Membuat repositori GitHub: $GITHUB_USER/$REPO_NAME (private: $PRIVATE)"
+  _github_api POST "https://api.github.com/user/repos" "$GITHUB_TOKEN" \
+    "{\"name\":\"$REPO_NAME\",\"private\":$PRIVATE}"
 
-  # Coba sampai 3 kali kalau koneksi gagal (WSL kadang telat siap DNS-nya,
-  # apalagi tepat setelah Docker selesai build).
-  local RESPONSE="" STATUS="000" BODY="" CURL_ERR="" attempt=1
-  local ERR_FILE
-  ERR_FILE=$(mktemp)
-  while [ "$attempt" -le 3 ]; do
-    # -sS: tetap senyap, tapi pesan error curl ditampilkan (ditangkap ke ERR_FILE)
-    RESPONSE=$(curl -sS --connect-timeout 10 --max-time 30 -w "\n%{http_code}" \
-      -H "Authorization: Bearer $GITHUB_TOKEN" \
-      -H "Accept: application/vnd.github.v3+json" \
-      -d "{\"name\":\"$REPO_NAME\", \"private\":$PRIVATE}" \
-      "https://api.github.com/user/repos" 2>"$ERR_FILE") || true
-    STATUS=$(echo "$RESPONSE" | tail -n1)
-    [ "$STATUS" != "000" ] && break
-    CURL_ERR=$(cat "$ERR_FILE")
-    log_warning "Percobaan $attempt/3: tidak bisa terhubung ke GitHub. ${CURL_ERR}"
-    attempt=$((attempt + 1))
-    [ "$attempt" -le 3 ] && sleep 5
-  done
-  rm -f "$ERR_FILE"
-  BODY=$(echo "$RESPONSE" | sed '$d')
-
-  case "$STATUS" in
+  case "$GH_STATUS" in
   201)
     log_success " 🤩 Repositori GitHub '$REPO_NAME' berhasil dibuat..."
     ;;
   422)
-    log_warning "Repositori '$REPO_NAME' sudah ada. Melanjutkan..."
+    log_warning "Repositori '$REPO_NAME' sudah ada di akun $GITHUB_USER. Melanjutkan push ke repo tersebut..."
     ;;
-  401)
-    # Token salah/kedaluwarsa: hapus supaya run berikutnya meminta token baru
-    rm -f "$SCRIPT_DIR/.github-token"
-    log_warning "Token GitHub ditolak (401: salah atau kedaluwarsa). File token dihapus; run berikutnya akan meminta token baru."
+  403 | 404)
+    log_warning "GitHub menolak pembuatan repo ($GH_STATUS). Pastikan token punya scope 'repo'. Pesan: $GH_BODY"
     log_warning "Proyek tetap dibuat secara lokal tanpa GitHub."
-    return
-    ;;
-  403)
-    log_warning "Akses ditolak (403). Pastikan token klasik punya scope 'repo'. Pesan: $BODY"
-    log_warning "Proyek tetap dibuat secara lokal tanpa GitHub."
-    return
+    return 0
     ;;
   000)
-    log_warning "Tidak ada koneksi ke api.github.com (bukan masalah token). Cek internet/DNS WSL: curl -I https://api.github.com"
-    log_warning "Proyek tetap dibuat secara lokal tanpa GitHub."
-    return
+    log_warning "Koneksi ke GitHub terputus saat membuat repo. Proyek tetap dibuat secara lokal tanpa GitHub."
+    return 0
     ;;
   *)
-    log_warning "Gagal membuat repositori. Status: $STATUS. Pesan: $BODY"
+    log_warning "Gagal membuat repositori. Status: $GH_STATUS. Pesan: $GH_BODY"
     log_warning "Proyek tetap dibuat secara lokal tanpa GitHub."
-    return
+    return 0
     ;;
   esac
 
+  GITHUB_TOKEN_OK="$GITHUB_TOKEN"
   GITHUB_REMOTE="https://github.com/$GITHUB_USER/$REPO_NAME.git"
 }
 
