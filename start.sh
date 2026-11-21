@@ -358,7 +358,7 @@ create_github_repo() {
 
   # Ambil username yang tersimpan (dipakai juga di README walau tidak membuat repo)
   if [ -f "$SCRIPT_DIR/.github-user" ]; then
-    GITHUB_USER=$(<"$SCRIPT_DIR/.github-user")
+    GITHUB_USER=$(tr -d '[:space:]' <"$SCRIPT_DIR/.github-user")
   fi
 
   local create_repo=""
@@ -378,9 +378,16 @@ create_github_repo() {
   else
     read -r -s -p "🔑 Masukkan GitHub Personal Access Token Anda (token klasik): " GITHUB_TOKEN
     echo
-    echo "$GITHUB_TOKEN" >"$SCRIPT_DIR/.github-token"
-    chmod 600 "$SCRIPT_DIR/.github-token" # hanya bisa dibaca pemilik
   fi
+  # Buang spasi, tab, newline, dan \r (sering ikut saat copy-paste dari Windows)
+  GITHUB_TOKEN=$(printf '%s' "$GITHUB_TOKEN" | tr -d '[:space:]')
+  if [ -z "$GITHUB_TOKEN" ]; then
+    log_warning "Token GitHub kosong. Proyek tetap dibuat secara lokal tanpa GitHub."
+    return
+  fi
+  # Simpan versi yang sudah dibersihkan, hanya bisa dibaca pemilik
+  printf '%s\n' "$GITHUB_TOKEN" >"$SCRIPT_DIR/.github-token"
+  chmod 600 "$SCRIPT_DIR/.github-token"
 
   # Default private (lebih aman). Anggota tim/dosen bisa ditambahkan sebagai collaborator.
   local is_private=""
@@ -393,28 +400,58 @@ create_github_repo() {
   local REPO_NAME="${PROJECT_NAME}-${YEAR}"
   log_info " 🚨 Mencoba membuat repositori GitHub: $GITHUB_USER/$REPO_NAME (private: $PRIVATE)"
 
-  # '|| true' supaya skrip tidak berhenti kalau internet putus
-  local RESPONSE
-  RESPONSE=$(curl -s -w "\n%{http_code}" \
-    -H "Authorization: Bearer $GITHUB_TOKEN" \
-    -H "Accept: application/vnd.github.v3+json" \
-    -d "{\"name\":\"$REPO_NAME\", \"private\":$PRIVATE}" \
-    "https://api.github.com/user/repos") || true
-
-  local BODY STATUS
+  # Coba sampai 3 kali kalau koneksi gagal (WSL kadang telat siap DNS-nya,
+  # apalagi tepat setelah Docker selesai build).
+  local RESPONSE="" STATUS="000" BODY="" CURL_ERR="" attempt=1
+  local ERR_FILE
+  ERR_FILE=$(mktemp)
+  while [ "$attempt" -le 3 ]; do
+    # -sS: tetap senyap, tapi pesan error curl ditampilkan (ditangkap ke ERR_FILE)
+    RESPONSE=$(curl -sS --connect-timeout 10 --max-time 30 -w "\n%{http_code}" \
+      -H "Authorization: Bearer $GITHUB_TOKEN" \
+      -H "Accept: application/vnd.github.v3+json" \
+      -d "{\"name\":\"$REPO_NAME\", \"private\":$PRIVATE}" \
+      "https://api.github.com/user/repos" 2>"$ERR_FILE") || true
+    STATUS=$(echo "$RESPONSE" | tail -n1)
+    [ "$STATUS" != "000" ] && break
+    CURL_ERR=$(cat "$ERR_FILE")
+    log_warning "Percobaan $attempt/3: tidak bisa terhubung ke GitHub. ${CURL_ERR}"
+    attempt=$((attempt + 1))
+    [ "$attempt" -le 3 ] && sleep 5
+  done
+  rm -f "$ERR_FILE"
   BODY=$(echo "$RESPONSE" | sed '$d')
-  STATUS=$(echo "$RESPONSE" | tail -n1)
 
-  if [ "$STATUS" = "201" ]; then
+  case "$STATUS" in
+  201)
     log_success " 🤩 Repositori GitHub '$REPO_NAME' berhasil dibuat..."
-  elif [ "$STATUS" = "422" ]; then
+    ;;
+  422)
     log_warning "Repositori '$REPO_NAME' sudah ada. Melanjutkan..."
-  else
-    # Tidak menghentikan skrip: proyek lokal tetap jadi, repo bisa dibuat manual nanti
-    log_warning "Gagal membuat repositori. Status: ${STATUS:-tidak ada respon}. Pesan: $BODY"
+    ;;
+  401)
+    # Token salah/kedaluwarsa: hapus supaya run berikutnya meminta token baru
+    rm -f "$SCRIPT_DIR/.github-token"
+    log_warning "Token GitHub ditolak (401: salah atau kedaluwarsa). File token dihapus; run berikutnya akan meminta token baru."
     log_warning "Proyek tetap dibuat secara lokal tanpa GitHub."
     return
-  fi
+    ;;
+  403)
+    log_warning "Akses ditolak (403). Pastikan token klasik punya scope 'repo'. Pesan: $BODY"
+    log_warning "Proyek tetap dibuat secara lokal tanpa GitHub."
+    return
+    ;;
+  000)
+    log_warning "Tidak ada koneksi ke api.github.com (bukan masalah token). Cek internet/DNS WSL: curl -I https://api.github.com"
+    log_warning "Proyek tetap dibuat secara lokal tanpa GitHub."
+    return
+    ;;
+  *)
+    log_warning "Gagal membuat repositori. Status: $STATUS. Pesan: $BODY"
+    log_warning "Proyek tetap dibuat secara lokal tanpa GitHub."
+    return
+    ;;
+  esac
 
   GITHUB_REMOTE="https://github.com/$GITHUB_USER/$REPO_NAME.git"
 }
