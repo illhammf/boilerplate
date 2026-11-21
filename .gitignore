@@ -1,4 +1,22 @@
+# Kredensial GitHub (JANGAN pernah di-commit)
 .github-token
 .github-user
+
+# Penanda internal skrip
 .docker_cleanup_done
+
+# Hasil build dokumentasi MkDocs
 site/
+
+# Dependencies & env di template Laravel (dibuat ulang saat proyek di-generate)
+template/src/vendor/
+template/src/node_modules/
+template/src/.env
+
+# Jaga-jaga: kunci/sertifikat tidak boleh masuk repo boilerplate
+*.key
+*.pem
+
+# OS files
+.DS_Store
+Thumbs.db
