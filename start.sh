@@ -559,7 +559,21 @@ setup_containers() {
 #  GITHUB
 # -----------------------------------------------------------------------------
 
+# Cadangan DNS: tanya IP sebuah domain ke Cloudflare (DNS-over-HTTPS).
+# Koneksinya langsung ke IP 1.1.1.1, jadi tetap jalan walau DNS WSL macet.
+# Pemakaian: _doh_resolve api.github.com   -> mencetak IP (kosong kalau gagal)
+_doh_resolve() {
+  curl -s --max-time 10 -H 'accept: application/dns-json' \
+    "https://1.1.1.1/dns-query?name=$1&type=A" 2>/dev/null |
+    grep -o '"data":"[0-9.]*"' | head -n1 | cut -d'"' -f4 || true
+}
+
+# IP cadangan hasil DoH (dipakai ulang oleh API GitHub dan git push)
+GH_API_IP=""
+
 # Memanggil GitHub API dengan retry jika koneksi gagal.
+# Kalau gagal karena DNS ("Resolving timed out"), percobaan berikutnya memakai
+# IP dari DoH lewat curl --resolve, jadi tidak bergantung pada DNS WSL lagi.
 # Pemakaian : _github_api METHOD URL TOKEN [JSON]
 # Hasil     : variabel global GH_STATUS, GH_BODY, GH_HEADERS, GH_ERR
 _github_api() {
@@ -579,6 +593,7 @@ _github_api() {
       -H "Accept: application/vnd.github+json"
       -H "X-GitHub-Api-Version: 2022-11-28")
     [ -n "$DATA" ] && ARGS+=(-d "$DATA")
+    [ -n "$GH_API_IP" ] && ARGS+=(--resolve "api.github.com:443:$GH_API_IP")
 
     # -sS: senyap, tapi pesan error curl tetap ditangkap ke ERR_FILE
     OUT=$(curl "${ARGS[@]}" "$URL" 2>"$ERR_FILE") || true
@@ -589,6 +604,17 @@ _github_api() {
     [ "$GH_STATUS" != "000" ] && break
 
     log_warning "Percobaan $attempt/3: tidak bisa terhubung ke GitHub. $GH_ERR"
+
+    # DNS WSL macet -> ambil IP api.github.com lewat DoH (sekali saja)
+    if [ -z "$GH_API_IP" ] && printf '%s' "$GH_ERR" | grep -qi 'resolv'; then
+      GH_API_IP=$(_doh_resolve api.github.com)
+      if [ -n "$GH_API_IP" ]; then
+        log_info "🛟 DNS WSL macet. Memakai DNS cadangan (1.1.1.1): api.github.com = $GH_API_IP"
+        attempt=$((attempt + 1))
+        continue # langsung coba lagi tanpa jeda
+      fi
+    fi
+
     attempt=$((attempt + 1))
     [ "$attempt" -le 3 ] && sleep 5
   done
