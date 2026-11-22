@@ -1,11 +1,11 @@
 <div align="center">
 
 ```text
- ___ _     _   _   __  __   ___      _ _                 _      _
-|_ _| |   | | /_\ |  \/  | | _ ) ___(_) |___ _ _ _ __ _ | |__ _| |_ ___
- | || |__ | |/ _ \| |\/| | | _ \/ _ \ | / -_) '_| '_ \ '| / _` |  _/ -_)
-|___|____||_/_/ \_\_|  |_| |___/\___/_|_\___|_| | .__/_||_\__,_|\__\___|
-                                                 |_|
+████   ███  █████ █     █████ ████  ████  █      ███  █████ █████
+█   █ █   █   █   █     █     █   █ █   █ █     █   █   █   █
+████  █   █   █   █     ████  ████  ████  █     █████   █   ████
+█   █ █   █   █   █     █     █  █  █     █     █   █   █   █
+████   ███  █████ █████ █████ █   █ █     █████ █   █   █   █████
 ```
 
 # 🚀 Laravel Boilerplate Pemrograman Web 2026
@@ -35,11 +35,9 @@
 | ⭐ Stars | <!--STARS--> 0 
 | 🍴 Forks | <!--FORKS--> 0 
 | 🐞 Open Issues | <!--ISSUES--> 0 
-<<<<<<< HEAD
 | 🕒 Last Updated | <!--LAST_UPDATED--> 22 November 2026, 12:56 WIB 
-=======
-| 🕒 Last Updated | <!--LAST_UPDATED--> 22 November 2026 
->>>>>>> 0000416 (docs: update main readme)
+
+> 🤖 Tabel statistik di atas diperbarui otomatis oleh GitHub Action. Jangan diedit manual.
 
 ---
 
@@ -646,6 +644,25 @@ Kalau repo dengan nama itu sudah ada dan berisi commit lain, push akan ditolak. 
 </details>
 
 <details>
+<summary>❌ <b><code>dcp</code> gagal saat pull/rebase (conflict)</b></summary>
+
+Repo ini punya GitHub Action yang memperbarui tabel **Repository Stats** di `README.md` secara otomatis. Kalau kamu ikut mengedit baris di tabel itu, git akan meminta kamu memilih salah satu. Cara menyelesaikannya:
+
+1. Buka file yang konflik, lalu cari baris `<<<<<<<`, `=======`, dan `>>>>>>>`.
+2. Sisakan satu versi (untuk tabel stats, pakai versi bot), lalu hapus baris lainnya beserta ketiga tanda tadi.
+3. Lanjutkan:
+
+```bash
+git add README.md
+git rebase --continue
+git push origin main
+```
+
+Supaya tidak terulang: jangan edit tabel Repository Stats secara manual, dan jalankan `git pull --rebase` sebelum mulai mengedit.
+
+</details>
+
+<details>
 <summary>✍️ <b>Hosts Windows "Perlu manual"</b></summary>
 
 UAC ditolak atau PowerShell tidak terdeteksi. Buka **Notepad sebagai Administrator**, buka `C:\Windows\System32\drivers\etc\hosts`, lalu tambahkan:
@@ -745,6 +762,9 @@ README di setiap proyek (dibuat otomatis) berisi langkah lengkapnya: clone, `cp 
 
 **Password database kok sederhana?**
 Itu hanya untuk lingkungan lokal. Jangan dipakai di server produksi.
+
+**Kenapa angka di Repository Stats berubah sendiri?**
+Tabel itu diperbarui otomatis oleh GitHub Action, jadi jangan diedit manual.
 
 ---
 
