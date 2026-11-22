@@ -26,7 +26,10 @@
 
 ## 📊 Repository Stats
 
-| Statistik | Total |
+> 🤖 Tabel ini diperbarui otomatis oleh GitHub Action setiap hari. Jangan diedit manual.
+> Views dan Clones adalah angka **14 hari terakhir** (batas API GitHub). Stars, Forks, dan Issues adalah angka saat ini.
+
+| Statistik | Nilai |
 |---|---:|
 | 👀 Views | <!--VIEW_COUNT--> 0 
 | 🙋 Unique Views | <!--UNIQUE_VIEWS--> 0 
@@ -35,9 +38,7 @@
 | ⭐ Stars | <!--STARS--> 0 
 | 🍴 Forks | <!--FORKS--> 0 
 | 🐞 Open Issues | <!--ISSUES--> 0 
-| 🕒 Last Updated | <!--LAST_UPDATED--> 22 November 2026, 12:56 WIB 
-
-> 🤖 Tabel statistik di atas diperbarui otomatis oleh GitHub Action. Jangan diedit manual.
+| 🕒 Last Updated | <!--LAST_UPDATED--> 22 November 2026, 12:56 WIB
 
 ---
 
