@@ -1,0 +1,89 @@
+name: 📊 Update Repo Stats
+
+on:
+  schedule:
+    - cron: "0 0 * * *"   # tiap hari 00:00 UTC = 07:00 WIB
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-stats
+  cancel-in-progress: false
+
+jobs:
+  stats:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📦 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🌿 Siapkan branch stats
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git ls-remote --exit-code --heads origin stats >/dev/null 2>&1; then
+            git fetch origin stats
+            git checkout -B stats origin/stats
+          else
+            git checkout --orphan stats
+            git rm -rf . >/dev/null 2>&1 || true
+            echo '{"days":{}}' > data.json
+          fi
+
+      - name: 📊 Ambil dan hitung statistik
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          set -euo pipefail
+          repo="${{ github.repository }}"
+
+          api() {
+            curl -sS \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/$repo/$1"
+          }
+
+          VIEWS=$(api traffic/views)
+          CLONES=$(api traffic/clones)
+
+          # Gagal keras kalau token/izin salah, jangan diam-diam menulis 0
+          echo "$VIEWS"  | jq -e '.views'  >/dev/null || { echo "::error::Gagal ambil views: $VIEWS";  exit 1; }
+          echo "$CLONES" | jq -e '.clones' >/dev/null || { echo "::error::Gagal ambil clones: $CLONES"; exit 1; }
+
+          [ -f data.json ] || echo '{"days":{}}' > data.json
+
+          # Gabungkan data 14 hari terakhir ke riwayat (hari yang sama ditimpa)
+          jq --argjson v "$VIEWS" --argjson c "$CLONES" '
+            reduce $v.views[]   as $d (.; .days[$d.timestamp[0:10]] += {views: $d.count,  view_uniques:  $d.uniques})
+            | reduce $c.clones[] as $d (.; .days[$d.timestamp[0:10]] += {clones: $d.count, clone_uniques: $d.uniques})
+          ' data.json > data.tmp && mv data.tmp data.json
+
+          sum() { jq "[.days[].$1 // 0] | add // 0" data.json; }
+          TV=$(sum views)
+          TVU=$(sum view_uniques)
+          TC=$(sum clones)
+          TCU=$(sum clone_uniques)
+          UPDATED=$(TZ="Asia/Jakarta" date +'%d %b %Y, %H:%M WIB')
+
+          badge() {
+            jq -n --arg l "$1" --arg m "$2" --arg c "$3" \
+              '{schemaVersion: 1, label: $l, message: $m, color: $c}' > "$4"
+          }
+          badge "total"   "$TV"      blue       views.json
+          badge "total"   "$TVU"     blueviolet unique_views.json
+          badge "total"   "$TC"      green      clones.json
+          badge "total"   "$TCU"     teal       unique_clones.json
+          badge "update"  "$UPDATED" lightgrey  updated.json
+
+          echo "Views=$TV (unik $TVU) | Clones=$TC (unik $TCU) | $UPDATED"
+
+      - name: 🤖 Commit ke branch stats
+        run: |
+          git add -A
+          git commit -m "🤖 stats: $(TZ=Asia/Jakarta date +'%Y-%m-%d %H:%M WIB')" || echo "Tidak ada perubahan"
+          git push origin stats
