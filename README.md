@@ -26,19 +26,20 @@
 
 ## 📊 Repository Stats
 
-> 🤖 Tabel ini diperbarui otomatis oleh GitHub Action setiap hari. Jangan diedit manual.
-> Views dan Clones adalah angka **14 hari terakhir** (batas API GitHub). Stars, Forks, dan Issues adalah angka saat ini.
+> 🤖 Semua angka di bawah ini diperbarui **otomatis**, tidak perlu diedit manual.
+> Views dan Clones dihitung total sejak bot pertama aktif (angka "unik" adalah jumlah unik per hari).
 
 | Statistik | Nilai |
-|---|---:|
-| 👀 Views | <!--VIEW_COUNT--> 0 
-| 🙋 Unique Views | <!--UNIQUE_VIEWS--> 0 
-| 📦 Clones | <!--CLONE_COUNT--> 0 
-| 👤 Unique Clones | <!--UNIQUE_CLONE--> 0 
-| ⭐ Stars | <!--STARS--> 0 
-| 🍴 Forks | <!--FORKS--> 0 
-| 🐞 Open Issues | <!--ISSUES--> 0 
-| 🕒 Last Updated | <!--LAST_UPDATED--> 22 November 2026, 12:56 WIB
+|---|---|
+| 👀 Views | ![Views](https://img.shields.io/endpoint?style=flat-square&url=https://raw.githubusercontent.com/illhammf/boilerplate/stats/views.json) |
+| 🙋 Unique Views | ![Unique Views](https://img.shields.io/endpoint?style=flat-square&url=https://raw.githubusercontent.com/illhammf/boilerplate/stats/unique_views.json) |
+| 📦 Clones | ![Clones](https://img.shields.io/endpoint?style=flat-square&url=https://raw.githubusercontent.com/illhammf/boilerplate/stats/clones.json) |
+| 👤 Unique Clones | ![Unique Clones](https://img.shields.io/endpoint?style=flat-square&url=https://raw.githubusercontent.com/illhammf/boilerplate/stats/unique_clones.json) |
+| ⭐ Stars | ![Stars](https://img.shields.io/github/stars/illhammf/boilerplate?style=flat-square) |
+| 🍴 Forks | ![Forks](https://img.shields.io/github/forks/illhammf/boilerplate?style=flat-square) |
+| 🐞 Open Issues | ![Issues](https://img.shields.io/github/issues/illhammf/boilerplate?style=flat-square) |
+| 🕒 Commit Terakhir | ![Last Commit](https://img.shields.io/github/last-commit/illhammf/boilerplate?style=flat-square) |
+| 🔄 Stats Diperbarui | ![Updated](https://img.shields.io/endpoint?style=flat-square&url=https://raw.githubusercontent.com/illhammf/boilerplate/stats/updated.json) |
 
 ---
 
