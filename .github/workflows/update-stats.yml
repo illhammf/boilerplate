@@ -2,54 +2,54 @@ name: 📊 Update Repo Stats
 
 on:
   schedule:
-    - cron: "0 0 * * *"   # tiap hari 00:00 UTC = 07:00 WIB
-  workflow_dispatch:
+    - cron: "0 */12 * * *"   # tiap 12 jam: 00:00 & 12:00 UTC = 07:00 & 19:00 WIB
+  workflow_dispatch:          # tombol "Run workflow" manual
+  push:                       # otomatis jalan tiap file ini diedit, jadi bisa langsung dites
+    branches: [main]
+    paths:
+      - ".github/workflows/update-stats.yml"
 
 permissions:
   contents: write
+  actions: write              # dipakai langkah keepalive di bawah
 
 concurrency:
   group: update-stats
   cancel-in-progress: false
 
+env:
+  STATS_BRANCH: stats
+  TZ: Asia/Jakarta
+
 jobs:
   stats:
+    name: 📈 Kumpulkan statistik
     runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     steps:
       - name: 📦 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
-      - name: 🌿 Siapkan branch stats
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          if git ls-remote --exit-code --heads origin stats >/dev/null 2>&1; then
-            git fetch origin stats
-            git checkout -B stats origin/stats
-          else
-            git checkout --orphan stats
-            git rm -rf . >/dev/null 2>&1 || true
-            echo '{"days":{}}' > data.json
-          fi
-
-      - name: 🔎 Diagnosa token
+      - name: 🔑 Cek token
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           if [ -z "$GH_TOKEN" ]; then
-            echo "::error::Secret GH_TOKEN KOSONG, tidak terbaca oleh workflow ini"
+            echo "::error::Secret GH_TOKEN kosong. Isi di Settings → Secrets and variables → Actions → Repository secrets"
             exit 1
           fi
-          echo "Panjang token: ${#GH_TOKEN} karakter, awalan: ${GH_TOKEN:0:4}"
-          curl -sS -D headers.txt -o body.json \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            "https://api.github.com/repos/${{ github.repository }}/traffic/views"
-          echo "Status : $(head -n1 headers.txt)"
-          echo "Scope  : $(grep -i '^x-oauth-scopes:' headers.txt || echo '(tidak ada header scope)')"
-          echo "Jawaban: $(jq -c . body.json | cut -c1-300)"
-          
+
+      - name: 📥 Ambil riwayat lama dari branch stats
+        run: |
+          mkdir -p stats
+          if git ls-remote --exit-code --heads origin "$STATS_BRANCH" >/dev/null 2>&1; then
+            git fetch --depth=1 origin "$STATS_BRANCH"
+            git show FETCH_HEAD:data.json > stats/data.json 2>/dev/null || echo '{"days":{}}' > stats/data.json
+          else
+            echo '{"days":{}}' > stats/data.json
+          fi
+
       - name: 📊 Ambil dan hitung statistik
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
@@ -58,48 +58,101 @@ jobs:
           repo="${{ github.repository }}"
 
           api() {
-            curl -sS \
+            curl -sS --retry 3 --retry-delay 5 --retry-all-errors \
               -H "Authorization: Bearer $GH_TOKEN" \
               -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
               "https://api.github.com/repos/$repo/$1"
           }
 
           VIEWS=$(api traffic/views)
           CLONES=$(api traffic/clones)
 
-          # Gagal keras kalau token/izin salah, jangan diam-diam menulis 0
+          # Gagal terang-terangan kalau token/izin salah, jangan diam-diam menulis 0
           echo "$VIEWS"  | jq -e '.views'  >/dev/null || { echo "::error::Gagal ambil views: $(echo "$VIEWS" | tr -d '\n' | tr -s ' ')";  exit 1; }
           echo "$CLONES" | jq -e '.clones' >/dev/null || { echo "::error::Gagal ambil clones: $(echo "$CLONES" | tr -d '\n' | tr -s ' ')"; exit 1; }
 
-          [ -f data.json ] || echo '{"days":{}}' > data.json
+          # Tambahan (opsional): sumber kunjungan dan halaman terpopuler
+          REFS=$(api traffic/popular/referrers);  echo "$REFS"  | jq -e 'type=="array"' >/dev/null 2>&1 || REFS='[]'
+          PATHS=$(api traffic/popular/paths);     echo "$PATHS" | jq -e 'type=="array"' >/dev/null 2>&1 || PATHS='[]'
 
           # Gabungkan data 14 hari terakhir ke riwayat (hari yang sama ditimpa)
           jq --argjson v "$VIEWS" --argjson c "$CLONES" '
             reduce $v.views[]   as $d (.; .days[$d.timestamp[0:10]] += {views: $d.count,  view_uniques:  $d.uniques})
             | reduce $c.clones[] as $d (.; .days[$d.timestamp[0:10]] += {clones: $d.count, clone_uniques: $d.uniques})
-          ' data.json > data.tmp && mv data.tmp data.json
+          ' stats/data.json > stats/data.tmp && mv stats/data.tmp stats/data.json
 
-          sum() { jq "[.days[].$1 // 0] | add // 0" data.json; }
-          TV=$(sum views)
-          TVU=$(sum view_uniques)
-          TC=$(sum clones)
-          TCU=$(sum clone_uniques)
-          UPDATED=$(TZ="Asia/Jakarta" date +'%d %b %Y, %H:%M WIB')
+          sum() { jq "[.days[].$1 // 0] | add // 0" stats/data.json; }
+          TV=$(sum views);   TVU=$(sum view_uniques)
+          TC=$(sum clones);  TCU=$(sum clone_uniques)
+          UPDATED=$(date +'%d %b %Y, %H:%M WIB')
 
+          # Badge abu-abu kalau nilainya 0, berwarna kalau sudah ada isinya
+          color() { if [ "$1" -gt 0 ]; then echo "$2"; else echo lightgrey; fi; }
           badge() {
             jq -n --arg l "$1" --arg m "$2" --arg c "$3" \
-              '{schemaVersion: 1, label: $l, message: $m, color: $c}' > "$4"
+              '{schemaVersion: 1, label: $l, message: $m, color: $c}' > "stats/$4"
           }
-          badge "total"   "$TV"      blue       views.json
-          badge "total"   "$TVU"     blueviolet unique_views.json
-          badge "total"   "$TC"      green      clones.json
-          badge "total"   "$TCU"     teal       unique_clones.json
-          badge "update"  "$UPDATED" lightgrey  updated.json
+          badge "total"  "$TV"      "$(color "$TV"  blue)"       views.json
+          badge "total"  "$TVU"     "$(color "$TVU" blueviolet)" unique_views.json
+          badge "total"  "$TC"      "$(color "$TC"  green)"      clones.json
+          badge "total"  "$TCU"     "$(color "$TCU" teal)"       unique_clones.json
+          badge "update" "$UPDATED" lightgrey                    updated.json
+
+          # Grafik mini tren views 14 hari terakhir
+          SPARK=$(jq -r '
+            (.days | to_entries | sort_by(.key) | .[-14:] | map(.value.views // 0)) as $v
+            | ($v | max // 0) as $m
+            | $v | map(if $m == 0 then 0 else (. * 7 / $m | floor) end)
+            | map(["▁","▂","▃","▄","▅","▆","▇","█"][.]) | join("")' stats/data.json)
+
+          # Ringkasan yang tampil di halaman run (tab Actions)
+          {
+            echo "## 📊 Statistik Repo"
+            echo ""
+            echo "| | Total | Unik (per hari) |"
+            echo "|---|---:|---:|"
+            echo "| 👀 Views  | $TV | $TVU |"
+            echo "| 📦 Clones | $TC | $TCU |"
+            echo ""
+            echo "**Tren views 14 hari terakhir:** \`${SPARK:-—}\`"
+            echo ""
+            echo "🕒 Diperbarui: $UPDATED"
+            if [ "$(echo "$REFS" | jq 'length')" -gt 0 ]; then
+              echo ""
+              echo "### 🔗 Sumber kunjungan teratas"
+              echo "| Sumber | Views | Unik |"
+              echo "|---|---:|---:|"
+              echo "$REFS" | jq -r '.[:5][] | "| \(.referrer) | \(.count) | \(.uniques) |"'
+            fi
+            if [ "$(echo "$PATHS" | jq 'length')" -gt 0 ]; then
+              echo ""
+              echo "### 📄 Halaman terpopuler"
+              echo "| Halaman | Views | Unik |"
+              echo "|---|---:|---:|"
+              echo "$PATHS" | jq -r '.[:5][] | "| \(.path) | \(.count) | \(.uniques) |"'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
           echo "Views=$TV (unik $TVU) | Clones=$TC (unik $TCU) | $UPDATED"
 
-      - name: 🤖 Commit ke branch stats
+      - name: 🚀 Publikasi ke branch stats
+        env:
+          TOKEN: ${{ github.token }}
         run: |
+          cd stats
+          git init -q -b "$STATS_BRANCH"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "🤖 stats: $(TZ=Asia/Jakarta date +'%Y-%m-%d %H:%M WIB')" || echo "Tidak ada perubahan"
-          git push origin stats
+          git commit -q -m "🤖 stats: $(date +'%Y-%m-%d %H:%M WIB')"
+          git remote add origin "https://x-access-token:${TOKEN}@github.com/${{ github.repository }}.git"
+          # Riwayat angka tersimpan di data.json, jadi branch cukup berisi 1 commit terbaru
+          git push --force origin "$STATS_BRANCH"
+
+      - name: 💓 Keepalive (cegah jadwal dimatikan GitHub)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api -X PUT "repos/${{ github.repository }}/actions/workflows/update-stats.yml/enable" \
+            || echo "Keepalive dilewati (tidak fatal)"
