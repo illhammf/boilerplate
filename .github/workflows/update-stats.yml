@@ -52,8 +52,8 @@ jobs:
           CLONES=$(api traffic/clones)
 
           # Gagal keras kalau token/izin salah, jangan diam-diam menulis 0
-          echo "$VIEWS"  | jq -e '.views'  >/dev/null || { echo "::error::Gagal ambil views: $VIEWS";  exit 1; }
-          echo "$CLONES" | jq -e '.clones' >/dev/null || { echo "::error::Gagal ambil clones: $CLONES"; exit 1; }
+          echo "$VIEWS"  | jq -e '.views'  >/dev/null || { echo "::error::Gagal ambil views: $(echo "$VIEWS" | tr -d '\n' | tr -s ' ')";  exit 1; }
+          echo "$CLONES" | jq -e '.clones' >/dev/null || { echo "::error::Gagal ambil clones: $(echo "$CLONES" | tr -d '\n' | tr -s ' ')"; exit 1; }
 
           [ -f data.json ] || echo '{"days":{}}' > data.json
 
