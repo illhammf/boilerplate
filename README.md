@@ -1,14 +1,22 @@
 <div align="center">
 
 ```text
-████   ███  █████ █     █████ ████  ████  █      ███  █████ █████
-█   █ █   █   █   █     █     █   █ █   █ █     █   █   █   █
-████  █   █   █   █     ████  ████  ████  █     █████   █   ████
-█   █ █   █   █   █     █     █  █  █     █     █   █   █   █
-████   ███  █████ █████ █████ █   █ █     █████ █   █   █   █████
+██████╗   ██████╗  ██╗ ██╗     ███████╗ ██████╗ 
+██╔══██╗ ██╔═══██╗ ██║ ██║     ██╔════╝ ██╔══██╗
+██████╔╝ ██║   ██║ ██║ ██║     █████╗   ██████╔╝
+██╔══██╗ ██║   ██║ ██║ ██║     ██╔══╝   ██╔══██╗
+██████╔╝ ╚██████╔╝ ██║ ███████╗ ███████╗ ██║  ██║
+╚═════╝   ╚═════╝  ╚═╝ ╚══════╝ ╚══════╝ ╚═╝  ╚═╝
+
+██████╗  ██╗      █████╗  ████████╗ ███████╗
+██╔══██╗ ██║     ██╔══██╗ ╚══██╔══╝ ██╔════╝
+██████╔╝ ██║     ███████║    ██║    █████╗  
+██╔═══╝  ██║     ██╔══██║    ██║    ██╔══╝  
+██║      ███████╗ ██║  ██║    ██║    ███████╗
+╚═╝      ╚══════╝ ╚═╝  ╚═╝    ╚═╝    ╚══════╝
 ```
 
-# 🚀 Laravel Boilerplate Pemrograman Web 2026
+# Laravel Boilerplate Pemrograman Web 2026
 
 ### Satu perintah → Laravel 12 + Filament + Docker + HTTPS + Repo GitHub. Siap ngoding. ⚡
 
@@ -27,6 +35,7 @@
 ## 📊 Repository Stats
 
 > 🤖 Semua angka di bawah ini diperbarui **otomatis**, tidak perlu diedit manual.
+
 > Views dan Clones dihitung total sejak bot pertama aktif (angka "unik" adalah jumlah unik per hari).
 
 | Statistik | Nilai |
