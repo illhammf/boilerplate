@@ -34,6 +34,22 @@ jobs:
             echo '{"days":{}}' > data.json
           fi
 
+      - name: 🔎 Diagnosa token
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::Secret GH_TOKEN KOSONG, tidak terbaca oleh workflow ini"
+            exit 1
+          fi
+          echo "Panjang token: ${#GH_TOKEN} karakter, awalan: ${GH_TOKEN:0:4}"
+          curl -sS -D headers.txt -o body.json \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/traffic/views"
+          echo "Status : $(head -n1 headers.txt)"
+          echo "Scope  : $(grep -i '^x-oauth-scopes:' headers.txt || echo '(tidak ada header scope)')"
+          echo "Jawaban: $(jq -c . body.json | cut -c1-300)"
+          
       - name: 📊 Ambil dan hitung statistik
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
