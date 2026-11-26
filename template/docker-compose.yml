@@ -22,7 +22,7 @@ services:
       - ./db/data:/var/lib/mysql
       - ./db/my.cnf:/etc/mysql/conf.d:ro
     environment:
-      MYSQL_USER: djambred
+      MYSQL_USER: illhammf
       MYSQL_PASSWORD: p455w0rd1!.
       MYSQL_ROOT_PASSWORD: p455w0rd
       TZ: Asia/Jakarta
