@@ -1,0 +1,124 @@
+{
+  "days": {
+    "2026-11-08": {
+      "views": 1,
+      "view_uniques": 1,
+      "clones": 13,
+      "clone_uniques": 7
+    },
+    "2026-11-09": {
+      "views": 1,
+      "view_uniques": 1,
+      "clones": 1,
+      "clone_uniques": 1
+    },
+    "2026-11-10": {
+      "views": 0,
+      "view_uniques": 0,
+      "clones": 14,
+      "clone_uniques": 6
+    },
+    "2026-11-11": {
+      "views": 2,
+      "view_uniques": 2,
+      "clones": 3,
+      "clone_uniques": 3
+    },
+    "2026-11-12": {
+      "views": 0,
+      "view_uniques": 0,
+      "clones": 4,
+      "clone_uniques": 4
+    },
+    "2026-11-13": {
+      "views": 3,
+      "view_uniques": 3,
+      "clones": 18,
+      "clone_uniques": 11
+    },
+    "2026-11-14": {
+      "views": 0,
+      "view_uniques": 0,
+      "clones": 2,
+      "clone_uniques": 2
+    },
+    "2026-11-15": {
+      "views": 0,
+      "view_uniques": 0,
+      "clones": 7,
+      "clone_uniques": 6
+    },
+    "2026-11-16": {
+      "views": 0,
+      "view_uniques": 0,
+      "clones": 5,
+      "clone_uniques": 4
+    },
+    "2026-11-17": {
+      "views": 0,
+      "view_uniques": 0,
+      "clones": 15,
+      "clone_uniques": 10
+    },
+    "2026-11-18": {
+      "views": 0,
+      "view_uniques": 0,
+      "clones": 4,
+      "clone_uniques": 3
+    },
+    "2026-11-19": {
+      "views": 0,
+      "view_uniques": 0,
+      "clones": 21,
+      "clone_uniques": 13
+    },
+    "2026-11-20": {
+      "views": 4,
+      "view_uniques": 3,
+      "clones": 7,
+      "clone_uniques": 4
+    },
+    "2026-11-21": {
+      "views": 0,
+      "view_uniques": 0,
+      "clones": 45,
+      "clone_uniques": 19
+    },
+    "2026-11-22": {
+      "views": 0,
+      "view_uniques": 0,
+      "clones": 39,
+      "clone_uniques": 17
+    },
+    "2026-11-23": {
+      "views": 5,
+      "view_uniques": 3,
+      "clones": 95,
+      "clone_uniques": 31
+    },
+    "2026-11-24": {
+      "views": 1,
+      "view_uniques": 1,
+      "clones": 30,
+      "clone_uniques": 13
+    },
+    "2026-11-25": {
+      "views": 0,
+      "view_uniques": 0,
+      "clones": 8,
+      "clone_uniques": 7
+    },
+    "2026-11-26": {
+      "views": 1,
+      "view_uniques": 1,
+      "clones": 4,
+      "clone_uniques": 2
+    },
+    "2026-11-27": {
+      "views": 0,
+      "view_uniques": 0,
+      "clones": 22,
+      "clone_uniques": 11
+    }
+  }
+}
